@@ -281,7 +281,8 @@ const GAME_MUSIC_BASE_MS   = 190;
 const GAME_MUSIC_STEP_MS   = 12;
 const GAME_MUSIC_MIN_MS    = 110;
 const GAME_MUSIC_SLOWMO    = 1.6;
-const MENU_MUSIC_TICK_MS   = 400; 
+const MENU_MUSIC_TICK_MS   = 400;
+const AUDIO_IDLE_FRAME_MS  = 800;   /* rAF молчит дольше — WebView в фоне */
 
 /* ============================================================================
  * UTILITIES
@@ -342,6 +343,7 @@ const finalBest  = document.getElementById('finalBest');
  * ==========================================================================*/
 let W = 0, H = 0, S = 1, dpr = 1, mouthX = 0, mouthY = 0, spawnY = 0;
 let enableTouch = true;
+let lastFrameAt = performance.now();
 
 function resize() {
   const w = stage.clientWidth, h = stage.clientHeight;
@@ -533,17 +535,34 @@ const Music = {
     this._stopTimer(); this.mode = mode; this.step = 0; this._schedule();
   },
   stop() { this._stopTimer(); this.mode = null; },
+  pause() { this._stopTimer(); },
+  resume() {
+    if (!this.mode || this.timer || AudioLifecycle.paused) return;
+    this._schedule();
+  },
   _stopTimer() { if (this.timer) { clearTimeout(this.timer); this.timer = null; } },
   _schedule() {
-    if (!this.mode) return;
+    if (!this.mode || this.timer || AudioLifecycle.paused) return;
     const interval = this.mode === 'menu' ? MENU_MUSIC_TICK_MS : this._gameInterval();
-    this.timer = setTimeout(() => { this._tick(); this._schedule(); }, interval);
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      this._tick();
+      this._schedule();
+    }, interval);
   },
   _gameInterval() {
     const base = Math.max(GAME_MUSIC_MIN_MS, GAME_MUSIC_BASE_MS - (G.level - 1) * GAME_MUSIC_STEP_MS);
     return base * (G.eatSequence ? GAME_MUSIC_SLOWMO : 1);
   },
   _tick() {
+    if (AudioLifecycle.paused) return;
+    // Android WebView в Nitron не вызывает onPause(): таймеры и Web Audio
+    // продолжают работать, хотя rAF уже остановлен. Это страховка на случай,
+    // если visibilitychange/blur не пришли.
+    if (performance.now() - lastFrameAt > AUDIO_IDLE_FRAME_MS) {
+      AudioLifecycle.pause();
+      return;
+    }
     if (!audioContext) return;
     if (audioContext.state === 'suspended') audioContext.resume().catch(()=>{});
     if (audioContext.state !== 'running') return;
@@ -611,6 +630,67 @@ const Music = {
     }
   }
 };
+
+/* ----------------------------------------------------------------------------
+ * Фоновый режим.
+ *
+ * Nitron-шаблон MainActivity не переопределяет onPause()/onResume() и не
+ * вызывает webView.onPause(), поэтому при уходе приложения в фон Web Audio
+ * продолжает звучать. Останавливаем музыку и сам AudioContext по событиям
+ * жизненного цикла, а Music._tick() дополнительно ловит случай, когда
+ * visibilitychange/blur не пришли, но rAF уже остановлен.
+ * --------------------------------------------------------------------------*/
+const AudioLifecycle = {
+  paused: false,
+  foreground: true,
+  pause() {
+    if (this.paused) return;
+    this.paused = true;
+    Music.pause();
+    if (audioContext && audioContext.state === 'running') {
+      audioContext.suspend().catch(() => {});
+    }
+  },
+  resume() {
+    if (!this.paused || document.hidden || !this.foreground) return;
+    this.paused = false;
+    G.last = 0;                         // после фона не прыгать на 0.05 с
+    const restart = () => { if (!this.paused) Music.resume(); };
+    if (audioContext && audioContext.state === 'suspended') {
+      audioContext.resume().then(restart).catch(() => {});
+    } else {
+      restart();
+    }
+  }
+};
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    AudioLifecycle.foreground = false;
+    AudioLifecycle.pause();
+  } else {
+    AudioLifecycle.foreground = true;
+    AudioLifecycle.resume();
+  }
+});
+window.addEventListener('pagehide', () => {
+  AudioLifecycle.foreground = false;
+  AudioLifecycle.pause();
+});
+window.addEventListener('pageshow', () => {
+  if (document.hidden) return;
+  AudioLifecycle.foreground = true;
+  AudioLifecycle.resume();
+});
+window.addEventListener('blur', () => {
+  AudioLifecycle.foreground = false;
+  AudioLifecycle.pause();
+});
+window.addEventListener('focus', () => {
+  if (document.hidden) return;
+  AudioLifecycle.foreground = true;
+  AudioLifecycle.resume();
+});
 
 /* ============================================================================
  * SPAWN & UPDATE LOGIC
@@ -1310,6 +1390,8 @@ function render() {
 }
 
 function loop(ts) {
+  lastFrameAt = ts;
+  if (AudioLifecycle.paused && AudioLifecycle.foreground && !document.hidden) AudioLifecycle.resume();
   if (!G.last) G.last = ts;
   let raw = (ts - G.last) / 1000; G.last = ts;
   if (raw > 0.05) raw = 0.05;
@@ -1436,14 +1518,17 @@ muteBtn.addEventListener('click', (e) => {
 
 function unlockAudio() {
   const ac = getAudioContext();
-  if (ac) {
-    if (ac.state === 'suspended') {
-      ac.resume().then(() => {
-        if (G.mode === 'menu') Music.play('menu');
-      });
-    } else if (ac.state === 'running') {
-      if (G.mode === 'menu') Music.play('menu');
-    }
+  if (!ac) return;
+  const start = () => {
+    AudioLifecycle.foreground = true;
+    AudioLifecycle.paused = false;
+    if (G.mode === 'menu') Music.play('menu');
+    else if (G.mode === 'play') Music.resume();
+  };
+  if (ac.state === 'suspended') {
+    ac.resume().then(start).catch(() => {});
+  } else if (ac.state === 'running') {
+    start();
   }
 }
 

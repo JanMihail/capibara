@@ -1,6 +1,6 @@
 # CONTEXT — проект «КУСЬ!»
 
-Документ для быстрого входа в проект. Описывает текущее состояние `index.html` (1469 строк, ~72 КБ, рабочая копия на базе `bad27c8` + правки full-screen вёрстки), правила игры, архитектуру, известные риски и точки расширения.
+Документ для быстрого входа в проект. Описывает текущее состояние `index.html` (1554 строки, ~74 КБ, рабочая копия после коммита `6122627` + правки фонового аудио), правила игры, архитектуру, известные риски и точки расширения.
 
 ## 1. Что это
 
@@ -19,13 +19,13 @@
 | Путь | Роль |
 |---|---|
 | `index.html` | Вся игра: разметка, CSS, JS (Canvas 2D + Web Audio) |
-| `nitron.config.json` | Параметры APK: name «КУСЬ!», `com.janmihail.kus`, version `1.0.10`, entry `index.html`, orientation `portrait`, `statusBar: false` (immersive full-screen), icon `icon.png`, permission `INTERNET`, `backButton: history` |
+| `nitron.config.json` | Параметры APK: name «КУСЬ!», `com.janmihail.kus`, version `1.0.11`, entry `index.html`, orientation `portrait`, `statusBar: false` (immersive full-screen), icon `icon.png`, permission `INTERNET`, `backButton: history` |
 | `README.md` | Инструкция сборки APK через Nitron |
 | `icon.png`, `icon.svg` | Иконка приложения |
 | `.gitignore` | Игнорируется только `dist` |
 | `trash/` | Архив 13 предыдущих версий: `kus_1.1.html` … `kus_1.8.html`, `Kus_last.html`, 4 экспорта deepseek. Текущий `index.html` — развитие ветки `kus_1.8`; в игре не используется |
 
-Git: ветка `master`; коммиты `fb23646 Initial commit`, `bad27c8 Контекст проекта`; правки full-screen вёрстки в `index.html` пока не закоммичены. `package.json`, тестов, линтера и CI нет.
+Git: ветка `master`; коммиты `fb23646 Initial commit`, `bad27c8 Контекст проекта`, `6122627 Полноэкранная вёрстка и независимая от разрешения сложность`; правки фонового аудио — поверх `6122627`. `package.json`, тестов, линтера и CI нет.
 
 ## 3. Стек и ограничения
 
@@ -42,21 +42,22 @@ Git: ветка `master`; коммиты `fb23646 Initial commit`, `bad27c8 Ко
 |---|---|
 | 1–140 | `<head>` и весь CSS: full-screen layout `#app/#stage`, HUD, combo, mute, `#biteBtn`, overlay/panel, кнопки сложности |
 | 142–203 | `<body>`, `#stage`, `#hud`, `#muteBtn`, `#biteBtn`, `#overlay` c `#menuScreen` и `#overScreen` |
-| 215–285 | `CONFIG`: `LEVELS`, игровые константы, `LOGICAL_HEIGHT`, эмодзи, аудио-константы |
+| 215–285 | `CONFIG`: `LEVELS`, игровые константы, `LOGICAL_HEIGHT`, эмодзи, аудио-константы (`AUDIO_IDLE_FRAME_MS`) |
 | 287–315 | Утилиты: `rnd`, `pick`, `clamp`, `dist`, `hexToRgba`, `vibrate`, `isJunkFood`, `difficultySpeedMultiplier` |
 | 317–339 | Кэш DOM-элементов |
-| 341–365 | Layout: `resize()`, `S = H / LOGICAL_HEIGHT`, `dpr ≤ 2`, `mouthX = W / 2`, `mouthY = 0.60H`, `spawnY = -60 * S`, `ResizeObserver`/`visualViewport` |
-| 367–382 | Состояние `G`, `currentLevel()`, `currentAccent()` |
-| 384–433 | Аудио-инфраструктура: `getAudioContext`, `getMasterOut`, шумовые буферы, `sfxContext` |
-| 435–526 | `Sfx`: crunch, perfect, levelUp, clang, whoosh, deflect, chomp, munch, penalty |
-| 529–612 | `Music`: планировщик на `setTimeout`, режимы `menu` / `game` |
-| 615–838 | Спавн и логика: интервалы, `canSpawn`, `pickItemType`, `spawnItem`, лапы, штрафная slow-mo сцена, партиклы, combo, level up, `bite()` |
-| 840–891 | `gameOver`, `returnToMenu`, `startGame` |
-| 893–984 | `updateVisuals`, `updatePaws`, `update` |
-| 987–1310 | Рендер: фон и декор, speed lines, предметы, лапа, капибара, партиклы, floats, shockwaves, slow-mo, vignette, flash, banner, `render()` |
-| 1312–1318 | `loop()` на `requestAnimationFrame`, `dt` ограничен 0.05 с |
-| 1321–1401 | Ввод: pointerdown/move/up/cancel, клавиатура |
-| 1403–1467 | Кнопки UI, разблокировка аудио, boot |
+| 341–366 | Layout: `resize()`, `S = H / LOGICAL_HEIGHT`, `dpr ≤ 2`, `mouthX = W / 2`, `mouthY = 0.60H`, `spawnY = -60 * S`, `lastFrameAt`, `ResizeObserver`/`visualViewport` |
+| 368–383 | Состояние `G`, `currentLevel()`, `currentAccent()` |
+| 385–435 | Аудио-инфраструктура: `getAudioContext`, `getMasterOut`, шумовые буферы, `sfxContext` |
+| 437–528 | `Sfx`: crunch, perfect, levelUp, clang, whoosh, deflect, chomp, munch, penalty |
+| 531–632 | `Music`: планировщик на `setTimeout`, режимы `menu` / `game`, `pause()`/`resume()`, сторож по `lastFrameAt` |
+| 634–693 | `AudioLifecycle`: пауза/возобновление Web Audio, `visibilitychange`, `pagehide/pageshow`, `blur/focus` |
+| 695–918 | Спавн и логика: интервалы, `canSpawn`, `pickItemType`, `spawnItem`, лапы, штрафная slow-mo сцена, партиклы, combo, level up, `bite()` |
+| 920–971 | `gameOver`, `returnToMenu`, `startGame` |
+| 973–1064 | `updateVisuals`, `updatePaws`, `update` |
+| 1067–1390 | Рендер: фон и декор, speed lines, предметы, лапа, капибара, партиклы, floats, shockwaves, slow-mo, vignette, flash, banner, `render()` |
+| 1392–1400 | `loop()` на `requestAnimationFrame`, `dt` ограничен 0.05 с, `lastFrameAt`, возобновление аудио |
+| 1402–1482 | Ввод: pointerdown/move/up/cancel, клавиатура |
+| 1484–1552 | Кнопки UI, `unlockAudio`, boot |
 
 ## 5. Исполнение, координаты, игровой цикл
 
@@ -70,6 +71,7 @@ Git: ветка `master`; коммиты `fb23646 Initial commit`, `bad27c8 Ко
 - Stage занимает весь вьюпорт: `#app` — `position: fixed` + `height: 100dvh` (fallback `100vh`), `#stage` — `width/height: 100%`, `border-radius: 0`; фон и canvas идут edge-to-edge, без letterbox 9:16. В APK дополнительно `statusBar: false` в `nitron.config.json`, чтобы системный статус-бар не занимал полосу.
 - Safe-area (`env(safe-area-inset-*)`) применяется точечно к padding `#hud`/`#overlay` и к позициям `#muteBtn`/`#biteBtn`; перед calc-значениями стоят px-fallback для WebView без `env()`.
 - `resize()` вызывается на `resize`, `orientationchange` (с задержкой 120 мс), `visualViewport.resize` и через `ResizeObserver` на `#stage`; пересчитывает `W`, `H`, `S`, `dpr`, позицию рта и точку спавна.
+- `lastFrameAt` обновляется в каждом кадре `loop()`. Если приложение ушло в фон, rAF останавливается, а `Music._tick()` по разнице времени (> `AUDIO_IDLE_FRAME_MS`) понимает это и глушит звук; при возврате `G.last` сбрасывается, чтобы не было скачка `dt`.
 - Масштаб зависит только от высоты: `S = H / LOGICAL_HEIGHT` (`LOGICAL_HEIGHT = 640`). Предмет летит от `-60 * S` до `0.60H + 62 * S` со скоростью `v * S`, поэтому время до рта равно `444 / v` секунд, окно укуса — `124 / v` секунд, а PERFECT — `49.6 / v`; от разрешения и соотношения сторон это не зависит. Ширина влияет только на фон/центровку: укус проверяется по `Y`, спавн идёт от `mouthX`.
 - На широких экранах (планшет/десктоп) геймплей остаётся в центральной колонке, а лишняя ширина заполняется фоном; в APK ориентация зафиксирована `portrait`.
 
@@ -167,7 +169,7 @@ Git: ветка `master`; коммиты `fb23646 Initial commit`, `bad27c8 Ко
 - `returnToMenu`: очистка массивов и эффектов, показ меню, включение меню-музыки. Счёт и бейдж уровня в HUD при этом не сбрасываются.
 - `startGame(diff)`: сброс счёта, уровней, предметов, эффектов, таймеров; `overlay.classList.add('hidden')`, музыка игры.
 
-## 7. Ключевые константы (`index.html`, строки 224–258)
+## 7. Ключевые константы (`index.html`, строки 218–285)
 
 | Группа | Константы |
 |---|---|
@@ -180,7 +182,7 @@ Git: ветка `master`; коммиты `fb23646 Initial commit`, `bad27c8 Ко
 | Эффекты | `HITSTOP_OK 0.035`, `HITSTOP_PERFECT 0.06`, `HITSTOP_LEVELUP 0.22` |
 | Level up | `LEVELUP_BOOST_MULT 1.55`, `LEVELUP_BOOST_TIME 0.55` |
 | Лапа | `PAW_BASE_TRAVEL 4.2`, `PAW_LEVEL_SPEEDUP 0.22`, `PAW_MIN_TRAVEL 2.4`, `PAW_HIT_RADIUS 78` (не используется), `PAW_SPAWN_MIN 5`, `PAW_SPAWN_MAX 9`, `PAW_SPAWN_CHANCE 0.7`, `TAP_FASTFOOD_RADIUS 40` |
-| Аудио | `GAME_MUSIC_BASE_MS 190`, `GAME_MUSIC_STEP_MS 12`, `GAME_MUSIC_MIN_MS 110`, `GAME_MUSIC_SLOWMO 1.6`, `MENU_MUSIC_TICK_MS 400` |
+| Аудио | `GAME_MUSIC_BASE_MS 190`, `GAME_MUSIC_STEP_MS 12`, `GAME_MUSIC_MIN_MS 110`, `GAME_MUSIC_SLOWMO 1.6`, `MENU_MUSIC_TICK_MS 400`, `AUDIO_IDLE_FRAME_MS 800` |
 | Визуал | `ITEM_BASE_SIZE 56`, `EMOJI_FONT`, `LOGICAL_HEIGHT 640`, `S = H / LOGICAL_HEIGHT`, `dpr ≤ 2` |
 
 ## 8. Аудио
@@ -192,7 +194,10 @@ Git: ветка `master`; коммиты `fb23646 Initial commit`, `bad27c8 Ко
   - `menu` — тик 400 мс, мелодия + пэды + бас/хай-хэт;
   - `game` — тик `190 - 12 * (level - 1)`, минимум 110 мс, в eat-сцене ×1.6;
   - `Music.stop()` при game over; музыка возвращается при старте игры или в меню.
-- Разблокировка: `unlockAudio` на pointerdown/touchstart/keydown/click + попытка через 100 мс после загрузки. На iOS/Android музыка стартует только после первого жеста.
+- `Music.pause()` останавливает только таймер и сохраняет режим, `Music.resume()` запускает его снова. Пока `AudioLifecycle.paused`, новые тики не планируются.
+- Фоновый режим: `AudioLifecycle` по `visibilitychange` (hidden), `pagehide` и `blur` вызывает `Music.pause()` и `audioContext.suspend()`; по visible, `pageshow` и `focus` — `audioContext.resume()` и продолжение текущего режима. Флаг `foreground` не даёт `loop()` отменить паузу, вызванную потерей фокуса.
+- В Nitron 3.1.0 `MainActivity` не переопределяет `onPause()`/`onResume()` и не вызывает `webView.onPause()`, поэтому таймеры и Web Audio могут продолжать работать в фоне. Дополнительная страховка: `Music._tick()` сравнивает `performance.now()` с `lastFrameAt`; если rAF не было дольше `AUDIO_IDLE_FRAME_MS` (800 мс), звук глушится. При возобновлении кадров `loop()` поднимает музыку обратно. Если WebView перестанет останавливать rAF и присылать события, понадобится нативный `onPause()`/`webView.onPause()`.
+- Разблокировка: `unlockAudio` на pointerdown/touchstart/keydown/click + попытка через 100 мс после загрузки. На iOS/Android музыка стартует только после первого жеста. `unlockAudio` также возобновляет музыку текущего режима после возврата из фона, если `AudioContext.resume()` был заблокирован.
 
 ## 9. Рендер
 
@@ -242,20 +247,20 @@ Git: ветка `master`; коммиты `fb23646 Initial commit`, `bad27c8 Ко
 | # | Место | Суть |
 |---|---|---|
 | 1 | `index.html:258` | `PAW_HIT_RADIUS` объявлена, но нигде не используется (наследие старой версии, где у лапы был `hitR`) |
-| 2 | `1371–1389` | Тело `pointerup` полностью закомментировано; `pointer.startX/startY/pawDeflected/downOnFastFood` фактически write-only. Задумка «укус по отпусканию / распознавание свайпа» отключена; `swipeTrail` — только косметика, на hard не создаётся |
-| 3 | `874–891` | `G.t` не сбрасывается между играми, а `G.lastBite = 0.3` не даёт грейс-периода: к моменту старта `G.t` уже большой. Защита «первый кусь не сразу» не работает, остаётся обычный кулдаун 0.09 с |
-| 4 | `344`, `857`, `1415–1428` | `enableTouch` включается только по `transitionend` оверлея; проверяется лишь `hidden`, но не `e.propertyName`/`e.target`. Если transition не сработал (фон WebView, reduced-motion), кнопки «ЗАНОВО» / «В МЕНЮ» останутся заблокированными, и из game over нельзя выйти |
-| 5 | `861–871` | `returnToMenu` не сбрасывает `#score` и `#lvBadge` — под полупрозрачным оверлеем меню виден результат прошлой игры |
-| 6 | `265`, `269`, `307` | Список фруктов продублирован (`FOOD_EMOJI` и `FRUIT_VEGETABLE_EMOJI`). Добавление фрукта только в один список сломает `isJunkFood` и красное свечение |
-| 7 | `371` | `localStorage.getItem` в инициализаторе `G` без try/catch: в ограниченном контексте `SecurityError` уронит весь скрипт (запись в `gameOver` уже обёрнута) |
-| 8 | `805–811` | Хит-тест только по `Y`: предмет, ушедший вбок из-за sway, всё равно съедается. Учитывать при балансировке и при добавлении боковых спавнов |
-| 9 | `618–633` | На hard нет падающего фастфуда, только лапа; при этом ловушек 38 %. При правке сложностей проверить, что меню и фактический спавн совпадают |
-| 10 | `939–977` | Во время eat-сцены еда не убивает (🥲), а фастфуд и ловушки пролетают без последствий — окно «неуязвимости» около 2.2 с |
-| 11 | `840` | `gameOver` сам не вызывает `resetCombo`; сейчас это делают все три вызывающих пути, но новый источник game over может оставить combo на HUD |
-| 12 | `346–364` | `resize` меняет `mouthX/mouthY`, но не сдвигает уже летящие предметы и лапы — при повороте/изменении окна (в т. ч. от `ResizeObserver`) возможен визуальный скачок. На сложность не влияет: скорости и дистанции нормированы через `S` |
-| 13 | `1430–1435` | Mute не сохраняется между сессиями; после game over музыка не возвращается автоматически (только в меню или в новой игре) |
+| 2 | `1453–1470` | Тело `pointerup` полностью закомментировано; `pointer.startX/startY/pawDeflected/downOnFastFood` фактически write-only. Задумка «укус по отпусканию / распознавание свайпа» отключена; `swipeTrail` — только косметика, на hard не создаётся |
+| 3 | `954–971` | `G.t` не сбрасывается между играми, а `G.lastBite = 0.3` не даёт грейс-периода: к моменту старта `G.t` уже большой. Защита «первый кусь не сразу» не работает, остаётся обычный кулдаун 0.09 с |
+| 4 | `345`, `937`, `1496–1510` | `enableTouch` включается только по `transitionend` оверлея; проверяется лишь `hidden`, но не `e.propertyName`/`e.target`. Если transition не сработал (фон WebView, reduced-motion), кнопки «ЗАНОВО» / «В МЕНЮ» останутся заблокированными, и из game over нельзя выйти |
+| 5 | `941–951` | `returnToMenu` не сбрасывает `#score` и `#lvBadge` — под полупрозрачным оверлеем меню виден результат прошлой игры |
+| 6 | `265`, `269`, `308` | Список фруктов продублирован (`FOOD_EMOJI` и `FRUIT_VEGETABLE_EMOJI`). Добавление фрукта только в один список сломает `isJunkFood` и красное свечение |
+| 7 | `373` | `localStorage.getItem` в инициализаторе `G` без try/catch: в ограниченном контексте `SecurityError` уронит весь скрипт (запись в `gameOver` уже обёрнута) |
+| 8 | `875–887` | Хит-тест только по `Y`: предмет, ушедший вбок из-за sway, всё равно съедается. Учитывать при балансировке и при добавлении боковых спавнов |
+| 9 | `698–713` | На hard нет падающего фастфуда, только лапа; при этом ловушек 38 %. При правке сложностей проверить, что меню и фактический спавн совпадают |
+| 10 | `1019–1057` | Во время eat-сцены еда не убивает (🥲), а фастфуд и ловушки пролетают без последствий — окно «неуязвимости» около 2.2 с |
+| 11 | `920` | `gameOver` сам не вызывает `resetCombo`; сейчас это делают все три вызывающих пути, но новый источник game over может оставить combo на HUD |
+| 12 | `348–366` | `resize` меняет `mouthX/mouthY`, но не сдвигает уже летящие предметы и лапы — при повороте/изменении окна (в т. ч. от `ResizeObserver`) возможен визуальный скачок. На сложность не влияет: скорости и дистанции нормированы через `S` |
+| 13 | `1512–1517` | Mute не сохраняется между сессиями; после game over музыка не возвращается автоматически (только в меню или в новой игре) |
 | 14 | `264–268` | Вся игровая логика завязана на эмодзи; на части Android WebView `🪨`, `⚙️`, `🌮` и вариации могут выглядеть иначе или отсутствовать |
-| 15 | — | Нет паузы, обработки `visibilitychange`, ARIA и `prefers-reduced-motion`. `dt` ограничен 0.05 с, поэтому физика после сворачивания не «взрывается» |
+| 15 | `634–693` | Nitron 3.1.0 `MainActivity` не вызывает `onPause()`/`webView.onPause()`. Остановка звука в фоне — JS-обход: события жизненного цикла + сторож по остановке rAF. Нет нативной паузы, ARIA и `prefers-reduced-motion` |
 
 ## 13. Точки расширения
 
@@ -285,11 +290,12 @@ Git: ветка `master`; коммиты `fb23646 Initial commit`, `bad27c8 Ко
   6. Hard: лапа летит, тап по иконке отбивает, пропуск даёт slow-mo и −30.
   7. Game over → «ЗАНОВО» и «В МЕНЮ» кликаются.
   8. Mute, рекорд в `localStorage`, поворот/ресайз, отсутствие ошибок в консоли.
-  9. Full-screen: на 9:16, 19.5:9, 20:9 и планшете нет чёрных полос; HUD/кнопка не залезают под вырез и системные жесты; при смене высоты вьюпорта предметы не «телепортируются» к рту.
-  10. Сложность не зависит от экрана: на разных разрешениях время падения от верхней кромки до рта и окно укуса одинаковые (формула из §5).
+  9. Фон: свернуть приложение или заблокировать экран в меню и во время игры — музыка замолкает; после возврата продолжается музыка текущего режима. В браузере то же при переключении вкладки/потере фокуса.
+  10. Full-screen: на 9:16, 19.5:9, 20:9 и планшете нет чёрных полос; HUD/кнопка не залезают под вырез и системные жесты; при смене высоты вьюпорта предметы не «телепортируются» к рту.
+  11. Сложность не зависит от экрана: на разных разрешениях время падения от верхней кромки до рта и окно укуса одинаковые (формула из §5).
 - При изменении баланса проверять связку «скорость ↔ интервал спавна ↔ допуск рта»: при высокой скорости и малом зазоре предметы могут стать неубиваемыми.
 
 ---
 
-Документ поддерживать вручную при изменении правил, констант или структуры `index.html`; номера строк актуальны для рабочей копии на базе коммита `bad27c8` (после коммита правок full-screen вёрстки обновить хэш).
+Документ поддерживать вручную при изменении правил, констант или структуры `index.html`; номера строк актуальны для рабочей копии после коммита `6122627` и правок фонового аудио.
 

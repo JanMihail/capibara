@@ -1,7 +1,7 @@
 {
   "name": "КУСЬ!",
   "packageId": "com.janmihail.kus",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "entry": "index.html",
   "orientation": "portrait",
   "icon": "icon.png",
