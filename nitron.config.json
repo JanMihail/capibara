@@ -5,7 +5,7 @@
   "entry": "index.html",
   "orientation": "portrait",
   "icon": "icon.png",
-  "statusBar": true,
+  "statusBar": false,
   "permissions": [
     "INTERNET"
   ],

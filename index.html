@@ -11,22 +11,18 @@
   html,body{ margin:0; height:100%; overflow:hidden; background:#08050f;
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
     user-select:none; -webkit-user-select:none; overscroll-behavior:none; }
-  #app{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
-    background:radial-gradient(circle at 50% 30%, #1a1030 0%, #08050f 70%);
-    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
-  #stage{ position:relative; overflow:hidden;
-    width:min(100vw, calc(100vh * 9 / 16));
-    height:min(100vh, calc(100vw * 16 / 9));
-    border-radius:22px;
-    box-shadow:0 0 0 1px rgba(255,255,255,.06), 0 30px 80px rgba(0,0,0,.7);
-    touch-action:none; }
-  @supports (height: 100dvh) {
-    #stage{ width:min(100vw, calc(100dvh * 9 / 16));
-      height:min(100dvh, calc(100vw * 16 / 9)); }
-  }
+  /* Full-bleed stage: fills the whole viewport on any aspect ratio.
+     Safe-area insets are applied to HUD, overlay and bite button individually. */
+  #app{ position:fixed; top:0; left:0; width:100%; height:100vh; height:100dvh;
+    overflow:hidden;
+    background:radial-gradient(circle at 50% 30%, #1a1030 0%, #08050f 70%); }
+  #stage{ position:relative; width:100%; height:100%; overflow:hidden;
+    border-radius:0; background:#08050f; touch-action:none; }
   #game{ display:block; width:100%; height:100%; }
 
-  #hud{ position:absolute; top:0; left:0; right:0; padding:12px 14px;
+  #hud{ position:absolute; top:0; left:0; right:0;
+    padding:12px 14px;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) calc(14px + env(safe-area-inset-right, 0px)) 12px calc(14px + env(safe-area-inset-left, 0px));
     display:flex; justify-content:space-between; align-items:flex-start;
     pointer-events:none; color:#fff; font-weight:800; }
   #leftHud{ display:flex; flex-direction:column; gap:6px; }
@@ -58,7 +54,10 @@
 
   #bestBox{ font-size:clamp(13px,3.2vmin,18px); opacity:.75; padding-top:6px;
     display:flex; gap:6px; align-items:center; }
-  #muteBtn{ pointer-events:auto; position:absolute; top:10px; right:12px;
+  #muteBtn{ pointer-events:auto; position:absolute;
+    top:10px; right:12px;
+    top: calc(10px + env(safe-area-inset-top, 0px));
+    right: calc(12px + env(safe-area-inset-right, 0px));
     background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12);
     color:#fff; font-size:clamp(14px,3.4vmin,18px);
     width:clamp(34px,8.5vmin,44px); height:clamp(34px,8.5vmin,44px);
@@ -66,7 +65,10 @@
     margin-top:clamp(30px,7vmin,42px); }
   #muteBtn:active{ transform:scale(.92); }
 
-  #biteBtn{ position:absolute; left:50%; bottom:3.5%; transform:translateX(-50%);
+  #biteBtn{ position:absolute; left:50%;
+    bottom:3.5%;
+    bottom: calc(3.5% + env(safe-area-inset-bottom, 0px));
+    transform:translateX(-50%);
     width:80%; height:15.5%; border:0; border-radius:999px;
     background: var(--bite-bg, linear-gradient(180deg,#ffd166,#f4a300));
     color:#40200a; font-weight:900; letter-spacing:.06em;
@@ -78,12 +80,14 @@
   #biteBtn.eating{ background:linear-gradient(180deg,#666,#333); color:#888;
     opacity:.7; box-shadow:0 4px 0 #1a1a1a, 0 8px 16px rgba(0,0,0,.4); }
 
-  #overlay{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    padding:22px; background:rgba(8,5,18,.78); backdrop-filter:blur(7px);
+  #overlay{ position:absolute; inset:0; display:flex; align-items:flex-start; justify-content:center;
+    padding:22px;
+    padding: calc(22px + env(safe-area-inset-top, 0px)) calc(22px + env(safe-area-inset-right, 0px)) calc(22px + env(safe-area-inset-bottom, 0px)) calc(22px + env(safe-area-inset-left, 0px));
+    background:rgba(8,5,18,.78); backdrop-filter:blur(7px);
     -webkit-backdrop-filter:blur(7px); transition:opacity .18s ease;
     overflow-y:auto; touch-action:pan-y; }
   #overlay.hidden{ opacity:0; pointer-events:none; }
-  .panel{ width:100%; max-width:380px; text-align:center; color:#fff; }
+  .panel{ width:100%; max-width:380px; margin:auto; text-align:center; color:#fff; }
   .panel.hide{ display:none; }
   .panel h1{ margin:0 0 10px; font-size:clamp(46px,14vmin,84px); letter-spacing:.05em;
     color:#ffd166; text-shadow:0 7px 0 #a96400, 0 16px 30px rgba(0,0,0,.55); }
@@ -267,6 +271,12 @@ const FRUIT_VEGETABLE_EMOJI = new Set(['🍉','🍌','🍎','🥕','🍇']);
 const EMOJI_FONT           = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
 const ITEM_BASE_SIZE       = 56;
 
+/* Logical height of the playfield. Distances, sizes and speeds below are
+   defined in these units and multiplied by S = H / LOGICAL_HEIGHT, so the
+   fall time and the bite window stay the same on any screen resolution or
+   aspect ratio (t = (0.60 + 0.09375) * LOGICAL_HEIGHT / speed). */
+const LOGICAL_HEIGHT       = 640;
+
 const GAME_MUSIC_BASE_MS   = 190;
 const GAME_MUSIC_STEP_MS   = 12;
 const GAME_MUSIC_MIN_MS    = 110;
@@ -334,18 +344,24 @@ let W = 0, H = 0, S = 1, dpr = 1, mouthX = 0, mouthY = 0, spawnY = 0;
 let enableTouch = true;
 
 function resize() {
-  const r = stage.getBoundingClientRect();
+  const w = stage.clientWidth, h = stage.clientHeight;
+  if (w < 1 || h < 1) return;
   dpr = Math.min(window.devicePixelRatio || 1, 2);
-  W = r.width; H = r.height;
+  W = w; H = h;
   canvas.width  = Math.max(1, Math.round(W * dpr));
   canvas.height = Math.max(1, Math.round(H * dpr));
-  S = H / 640;
+  // Height-only scale keeps difficulty resolution-independent: the item falls
+  // 444 logical units to the mouth at v units/s on any display, so reaction
+  // time (and the PERFECT window) does not change with screen size.
+  S = H / LOGICAL_HEIGHT;
   mouthX = W / 2;
   mouthY = H * 0.60;
   spawnY = -60 * S;
 }
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 120));
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
+if (typeof ResizeObserver === 'function') new ResizeObserver(resize).observe(stage);
 
 /* ============================================================================
  * GAME STATE

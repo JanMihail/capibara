@@ -1,6 +1,6 @@
 # CONTEXT — проект «КУСЬ!»
 
-Документ для быстрого входа в проект. Описывает текущее состояние `index.html` (1453 строки, ~69 КБ, коммит `fb23646`), правила игры, архитектуру, известные риски и точки расширения.
+Документ для быстрого входа в проект. Описывает текущее состояние `index.html` (1469 строк, ~72 КБ, рабочая копия на базе `bad27c8` + правки full-screen вёрстки), правила игры, архитектуру, известные риски и точки расширения.
 
 ## 1. Что это
 
@@ -19,13 +19,13 @@
 | Путь | Роль |
 |---|---|
 | `index.html` | Вся игра: разметка, CSS, JS (Canvas 2D + Web Audio) |
-| `nitron.config.json` | Параметры APK: name «КУСЬ!», `com.janmihail.kus`, version `1.0.10`, entry `index.html`, orientation `portrait`, icon `icon.png`, permission `INTERNET`, `backButton: history` |
+| `nitron.config.json` | Параметры APK: name «КУСЬ!», `com.janmihail.kus`, version `1.0.10`, entry `index.html`, orientation `portrait`, `statusBar: false` (immersive full-screen), icon `icon.png`, permission `INTERNET`, `backButton: history` |
 | `README.md` | Инструкция сборки APK через Nitron |
 | `icon.png`, `icon.svg` | Иконка приложения |
 | `.gitignore` | Игнорируется только `dist` |
 | `trash/` | Архив 13 предыдущих версий: `kus_1.1.html` … `kus_1.8.html`, `Kus_last.html`, 4 экспорта deepseek. Текущий `index.html` — развитие ветки `kus_1.8`; в игре не используется |
 
-Git: ветка `master`, один коммит `fb23646 Initial commit`. `package.json`, тестов, линтера и CI нет.
+Git: ветка `master`; коммиты `fb23646 Initial commit`, `bad27c8 Контекст проекта`; правки full-screen вёрстки в `index.html` пока не закоммичены. `package.json`, тестов, линтера и CI нет.
 
 ## 3. Стек и ограничения
 
@@ -40,23 +40,23 @@ Git: ветка `master`, один коммит `fb23646 Initial commit`. `packa
 
 | Строки | Содержимое |
 |---|---|
-| 1–200 | `<head>` и весь CSS: layout `#app/#stage` 9:16, HUD, combo, mute, `#biteBtn`, overlay/panel, кнопки сложности |
-| 201–202 | `<body>`, `#stage`, `#hud`, `#muteBtn`, `#biteBtn`, `#overlay` c `#menuScreen` и `#overScreen` |
-| 203–275 | `CONFIG`: `LEVELS`, игровые константы, эмодзи, аудио-константы |
-| 276–304 | Утилиты: `rnd`, `pick`, `clamp`, `dist`, `hexToRgba`, `vibrate`, `isJunkFood`, `difficultySpeedMultiplier` |
-| 306–328 | Кэш DOM-элементов |
-| 330–348 | Layout: `resize()`, `S = H / 640`, `dpr ≤ 2`, `mouthX = W / 2`, `mouthY = 0.60H`, `spawnY = -60 * S` |
-| 350–365 | Состояние `G`, `currentLevel()`, `currentAccent()` |
-| 367–417 | Аудио-инфраструктура: `getAudioContext`, `getMasterOut`, шумовые буферы, `sfxContext` |
-| 419–511 | `Sfx`: crunch, perfect, levelUp, clang, whoosh, deflect, chomp, munch, penalty |
-| 513–597 | `Music`: планировщик на `setTimeout`, режимы `menu` / `game` |
-| 599–770 | Спавн и логика: интервалы, `canSpawn`, `pickItemType`, `spawnItem`, лапы, штрафная slow-mo сцена, партиклы, combo, level up, `bite()` |
-| 824–875 | `gameOver`, `returnToMenu`, `startGame` |
-| 877–969 | `updateVisuals`, `updatePaws`, `update` |
-| 970–1294 | Рендер: фон и декор, speed lines, предметы, лапа, капибара, партиклы, floats, shockwaves, slow-mo, vignette, flash, banner, `render()` |
-| 1296–1302 | `loop()` на `requestAnimationFrame`, `dt` ограничен 0.05 с |
-| 1304–1384 | Ввод: pointerdown/move/up/cancel, клавиатура |
-| 1386–1450 | Кнопки UI, разблокировка аудио, boot |
+| 1–140 | `<head>` и весь CSS: full-screen layout `#app/#stage`, HUD, combo, mute, `#biteBtn`, overlay/panel, кнопки сложности |
+| 142–203 | `<body>`, `#stage`, `#hud`, `#muteBtn`, `#biteBtn`, `#overlay` c `#menuScreen` и `#overScreen` |
+| 215–285 | `CONFIG`: `LEVELS`, игровые константы, `LOGICAL_HEIGHT`, эмодзи, аудио-константы |
+| 287–315 | Утилиты: `rnd`, `pick`, `clamp`, `dist`, `hexToRgba`, `vibrate`, `isJunkFood`, `difficultySpeedMultiplier` |
+| 317–339 | Кэш DOM-элементов |
+| 341–365 | Layout: `resize()`, `S = H / LOGICAL_HEIGHT`, `dpr ≤ 2`, `mouthX = W / 2`, `mouthY = 0.60H`, `spawnY = -60 * S`, `ResizeObserver`/`visualViewport` |
+| 367–382 | Состояние `G`, `currentLevel()`, `currentAccent()` |
+| 384–433 | Аудио-инфраструктура: `getAudioContext`, `getMasterOut`, шумовые буферы, `sfxContext` |
+| 435–526 | `Sfx`: crunch, perfect, levelUp, clang, whoosh, deflect, chomp, munch, penalty |
+| 529–612 | `Music`: планировщик на `setTimeout`, режимы `menu` / `game` |
+| 615–838 | Спавн и логика: интервалы, `canSpawn`, `pickItemType`, `spawnItem`, лапы, штрафная slow-mo сцена, партиклы, combo, level up, `bite()` |
+| 840–891 | `gameOver`, `returnToMenu`, `startGame` |
+| 893–984 | `updateVisuals`, `updatePaws`, `update` |
+| 987–1310 | Рендер: фон и декор, speed lines, предметы, лапа, капибара, партиклы, floats, shockwaves, slow-mo, vignette, flash, banner, `render()` |
+| 1312–1318 | `loop()` на `requestAnimationFrame`, `dt` ограничен 0.05 с |
+| 1321–1401 | Ввод: pointerdown/move/up/cancel, клавиатура |
+| 1403–1467 | Кнопки UI, разблокировка аудио, boot |
 
 ## 5. Исполнение, координаты, игровой цикл
 
@@ -66,9 +66,12 @@ Git: ветка `master`, один коммит `fb23646 Initial commit`. `packa
 - `rawDt` — реальное время; игровое `dt = rawDt * timeScale` (в slow-mo `timeScale = 0.22`). Таймер eat-сцены и `hitStop` считаются в реальном времени.
 - При `hitStop > 0` update выходит после визуальных эффектов — геймплей замирает на 0.035–0.22 с.
 - `G.t` — накопленное игровое время для анимаций; между играми не сбрасывается.
-- Координаты — CSS-пиксели stage. Контекст масштабируется `setTransform(dpr, ...)`, размеры сцены умножаются на `S` (высота / 640), UI живёт на CSS `clamp()/vmin`.
-- Stage всегда 9:16: `width: min(100vw, 100dvh * 9 / 16)`, `height: min(100dvh, 100vw * 16 / 9)`, безопасные зоны через `env(safe-area-inset-*)`.
-- `resize()` вызывается на `resize` и `orientationchange` (с задержкой 120 мс), пересчитывает `W`, `H`, `S`, `dpr`, позицию рта и точку спавна.
+- Координаты — CSS-пиксели stage. Контекст масштабируется `setTransform(dpr, ...)`, размеры сцены умножаются на `S` (высота / `LOGICAL_HEIGHT`), UI живёт на CSS `clamp()/vmin`.
+- Stage занимает весь вьюпорт: `#app` — `position: fixed` + `height: 100dvh` (fallback `100vh`), `#stage` — `width/height: 100%`, `border-radius: 0`; фон и canvas идут edge-to-edge, без letterbox 9:16. В APK дополнительно `statusBar: false` в `nitron.config.json`, чтобы системный статус-бар не занимал полосу.
+- Safe-area (`env(safe-area-inset-*)`) применяется точечно к padding `#hud`/`#overlay` и к позициям `#muteBtn`/`#biteBtn`; перед calc-значениями стоят px-fallback для WebView без `env()`.
+- `resize()` вызывается на `resize`, `orientationchange` (с задержкой 120 мс), `visualViewport.resize` и через `ResizeObserver` на `#stage`; пересчитывает `W`, `H`, `S`, `dpr`, позицию рта и точку спавна.
+- Масштаб зависит только от высоты: `S = H / LOGICAL_HEIGHT` (`LOGICAL_HEIGHT = 640`). Предмет летит от `-60 * S` до `0.60H + 62 * S` со скоростью `v * S`, поэтому время до рта равно `444 / v` секунд, окно укуса — `124 / v` секунд, а PERFECT — `49.6 / v`; от разрешения и соотношения сторон это не зависит. Ширина влияет только на фон/центровку: укус проверяется по `Y`, спавн идёт от `mouthX`.
+- На широких экранах (планшет/десктоп) геймплей остаётся в центральной колонке, а лишняя ширина заполняется фоном; в APK ориентация зафиксирована `portrait`.
 
 ## 6. Игровые правила
 
@@ -178,7 +181,7 @@ Git: ветка `master`, один коммит `fb23646 Initial commit`. `packa
 | Level up | `LEVELUP_BOOST_MULT 1.55`, `LEVELUP_BOOST_TIME 0.55` |
 | Лапа | `PAW_BASE_TRAVEL 4.2`, `PAW_LEVEL_SPEEDUP 0.22`, `PAW_MIN_TRAVEL 2.4`, `PAW_HIT_RADIUS 78` (не используется), `PAW_SPAWN_MIN 5`, `PAW_SPAWN_MAX 9`, `PAW_SPAWN_CHANCE 0.7`, `TAP_FASTFOOD_RADIUS 40` |
 | Аудио | `GAME_MUSIC_BASE_MS 190`, `GAME_MUSIC_STEP_MS 12`, `GAME_MUSIC_MIN_MS 110`, `GAME_MUSIC_SLOWMO 1.6`, `MENU_MUSIC_TICK_MS 400` |
-| Визуал | `ITEM_BASE_SIZE 56`, `EMOJI_FONT`, `S = H / 640`, `dpr ≤ 2` |
+| Визуал | `ITEM_BASE_SIZE 56`, `EMOJI_FONT`, `LOGICAL_HEIGHT 640`, `S = H / LOGICAL_HEIGHT`, `dpr ≤ 2` |
 
 ## 8. Аудио
 
@@ -215,10 +218,11 @@ Git: ветка `master`, один коммит `fb23646 Initial commit`. `packa
 
 ## 10. UI и DOM
 
-- `#stage` — 9:16, скругление 22 px, `touch-action: none`, safe-area insets, поддержка `dvh`.
+- `#stage` — full-screen: `#app` фиксирован на вьюпорт (`100dvh`, fallback `100vh`), `#stage` растянут на 100%, `border-radius: 0`, `touch-action: none`; фон и canvas edge-to-edge.
+- Safe-area insets добавляются внутри HUD, overlay и кнопки укуса, поэтому игра уходит под вырез/системные жесты, а интерактив остаётся в безопасной зоне.
 - HUD: `#lvBadge` (LV + имя мира, цвет по сложности), `#score`, `#combo` (count, mult, полоса), `#bestBox` с рекордом, `#muteBtn`.
 - `#biteBtn` — `pointer-events: none`, попадание проверяется геометрически через `isInBiteButtonArea()`; цвет — CSS-переменная `--bite-bg` из accent мира; состояния `.pressed` и `.eating`.
-- `#overlay` стартует видимым (без `.hidden`), при старте игры получает `.hidden` (opacity 0 + `pointer-events: none`).
+- `#overlay` стартует видимым (без `.hidden`), при старте игры получает `.hidden` (opacity 0 + `pointer-events: none`); `.panel` центрируется `margin:auto`, а на коротких экранах оверлей скроллится сверху, не обрезая заголовок.
 - Панели `#menuScreen` / `#overScreen` переключаются классом `.hide` (`display: none`).
 - `enableTouch` — защита от фантомных кликов: `false` в `gameOver`, `true` по `transitionend` оверлея; блокирует «ЗАНОВО» и «В МЕНЮ».
 - Тексты интерфейса и подсказки — на русском, стиль «жирный казуальный», кнопки с «объёмной» тенью.
@@ -237,31 +241,32 @@ Git: ветка `master`, один коммит `fb23646 Initial commit`. `packa
 
 | # | Место | Суть |
 |---|---|---|
-| 1 | `index.html:254` | `PAW_HIT_RADIUS` объявлена, но нигде не используется (наследие старой версии, где у лапы был `hitR`) |
-| 2 | `1355–1372` | Тело `pointerup` полностью закомментировано; `pointer.startX/startY/pawDeflected/downOnFastFood` фактически write-only. Задумка «укус по отпусканию / распознавание свайпа» отключена; `swipeTrail` — только косметика, на hard не создаётся |
-| 3 | `858–868` | `G.t` не сбрасывается между играми, а `G.lastBite = 0.3` не даёт грейс-периода: к моменту старта `G.t` уже большой. Защита «первый кусь не сразу» не работает, остаётся обычный кулдаун 0.09 с |
-| 4 | `334`, `841`, `1399–1412` | `enableTouch` включается только по `transitionend` оверлея; нет проверки `e.propertyName` и `e.target` (комментарий обещает проверку opacity). Если transition не сработал (фон WebView, reduced-motion), кнопки «ЗАНОВО» / «В МЕНЮ» останутся заблокированными, и из game over нельзя выйти |
-| 5 | `845–856` | `returnToMenu` не сбрасывает `#score` и `#lvBadge` — под полупрозрачным оверлеем меню виден результат прошлой игры |
-| 6 | `261`, `265`, `296` | Список фруктов продублирован (`FOOD_EMOJI` и `FRUIT_VEGETABLE_EMOJI`). Добавление фрукта только в один список сломает `isJunkFood` и красное свечение |
-| 7 | `356` | `localStorage.getItem` в инициализаторе `G` без try/catch: в ограниченном контексте `SecurityError` уронит весь скрипт (запись в `gameOver` уже обёрнута) |
-| 8 | `784–791` | Хит-тест только по `Y`: предмет, ушедший вбок из-за sway, всё равно съедается. Учитывать при балансировке и при добавлении боковых спавнов |
-| 9 | `612–623` | На hard нет падающего фастфуда, только лапа; при этом ловушек 38 %. При правке сложностей проверить, что меню и фактический спавн совпадают |
-| 10 | `923–968` | Во время eat-сцены еда не убивает (🥲), а фастфуд и ловушки пролетают без последствий — окно «неуязвимости» около 2.2 с |
-| 11 | `824` | `gameOver` сам не вызывает `resetCombo`; сейчас это делают все три вызывающих пути, но новый источник game over может оставить combo на HUD |
-| 12 | `336–348` | `resize` меняет `mouthX/mouthY`, но не сдвигает уже летящие предметы и лапы — при повороте/изменении окна возможен визуальный скачок |
-| 13 | `1414–1419` | Mute не сохраняется между сессиями; после game over музыка не возвращается автоматически (только в меню или в новой игре) |
-| 14 | `260–263` | Вся игровая логика завязана на эмодзи; на части Android WebView `🪨`, `⚙️`, `🌮` и вариации могут выглядеть иначе или отсутствовать |
+| 1 | `index.html:258` | `PAW_HIT_RADIUS` объявлена, но нигде не используется (наследие старой версии, где у лапы был `hitR`) |
+| 2 | `1371–1389` | Тело `pointerup` полностью закомментировано; `pointer.startX/startY/pawDeflected/downOnFastFood` фактически write-only. Задумка «укус по отпусканию / распознавание свайпа» отключена; `swipeTrail` — только косметика, на hard не создаётся |
+| 3 | `874–891` | `G.t` не сбрасывается между играми, а `G.lastBite = 0.3` не даёт грейс-периода: к моменту старта `G.t` уже большой. Защита «первый кусь не сразу» не работает, остаётся обычный кулдаун 0.09 с |
+| 4 | `344`, `857`, `1415–1428` | `enableTouch` включается только по `transitionend` оверлея; проверяется лишь `hidden`, но не `e.propertyName`/`e.target`. Если transition не сработал (фон WebView, reduced-motion), кнопки «ЗАНОВО» / «В МЕНЮ» останутся заблокированными, и из game over нельзя выйти |
+| 5 | `861–871` | `returnToMenu` не сбрасывает `#score` и `#lvBadge` — под полупрозрачным оверлеем меню виден результат прошлой игры |
+| 6 | `265`, `269`, `307` | Список фруктов продублирован (`FOOD_EMOJI` и `FRUIT_VEGETABLE_EMOJI`). Добавление фрукта только в один список сломает `isJunkFood` и красное свечение |
+| 7 | `371` | `localStorage.getItem` в инициализаторе `G` без try/catch: в ограниченном контексте `SecurityError` уронит весь скрипт (запись в `gameOver` уже обёрнута) |
+| 8 | `805–811` | Хит-тест только по `Y`: предмет, ушедший вбок из-за sway, всё равно съедается. Учитывать при балансировке и при добавлении боковых спавнов |
+| 9 | `618–633` | На hard нет падающего фастфуда, только лапа; при этом ловушек 38 %. При правке сложностей проверить, что меню и фактический спавн совпадают |
+| 10 | `939–977` | Во время eat-сцены еда не убивает (🥲), а фастфуд и ловушки пролетают без последствий — окно «неуязвимости» около 2.2 с |
+| 11 | `840` | `gameOver` сам не вызывает `resetCombo`; сейчас это делают все три вызывающих пути, но новый источник game over может оставить combo на HUD |
+| 12 | `346–364` | `resize` меняет `mouthX/mouthY`, но не сдвигает уже летящие предметы и лапы — при повороте/изменении окна (в т. ч. от `ResizeObserver`) возможен визуальный скачок. На сложность не влияет: скорости и дистанции нормированы через `S` |
+| 13 | `1430–1435` | Mute не сохраняется между сессиями; после game over музыка не возвращается автоматически (только в меню или в новой игре) |
+| 14 | `264–268` | Вся игровая логика завязана на эмодзи; на части Android WebView `🪨`, `⚙️`, `🌮` и вариации могут выглядеть иначе или отсутствовать |
 | 15 | — | Нет паузы, обработки `visibilitychange`, ARIA и `prefers-reduced-motion`. `dt` ограничен 0.05 с, поэтому физика после сворачивания не «взрывается» |
 
 ## 13. Точки расширения
 
 | Задача | Что менять |
 |---|---|
-| Новый мир | Объект в `LEVELS` (`index.html:214`): `name`, `bg[3]`, `accent`, `decor` из `stars/embers/grid/bubbles`. Кап уровней = `LEVELS.length` |
+| Новый мир | Объект в `LEVELS` (`index.html:218`): `name`, `bg[3]`, `accent`, `decor` из `stars/embers/grid/bubbles`. Кап уровней = `LEVELS.length` |
 | Новый фрукт/овощ | Добавить **в оба** списка: `FOOD_EMOJI` и `FRUIT_VEGETABLE_EMOJI` |
 | Новый фастфуд/ловушка | `FASTFOOD_EMOJI` / `TRAP_EMOJI`; проверить, что `isJunkFood` красит фастфуд и не трогает ловушки |
 | Новая сложность | `difficultySpeedMultiplier`, `pickItemType`, `startGame` (`pawTimer`), порядок отрисовки в `render`, палитра `updateLevelBadge`, условие маски в `drawCapybara`, подпись в `gameOver`, кнопка в меню |
-| Баланс | Только блок констант `224–258` |
+| Баланс | Только блок констант `228–263` |
+| Масштаб/адаптивность | `LOGICAL_HEIGHT` (`278`) и формула `S = H / LOGICAL_HEIGHT`; все игровые размеры/скорости держать с множителем `S`, не завязывать геймплей на `W`/`vmin`, иначе сложность начнёт зависеть от экрана |
 | Новый эффект | Обновление в `updateVisuals`, отрисовка в `render`, при необходимости — контейнер в `G` |
 | Новая механика | Поля в `G`, ветка в `update`, регистрация спавна, отрисовка, при необходимости — ветка в `pointerdown` / `keydown` |
 | Персистентность | Сейчас только ключ `kus_best`; новые ключи добавлять с try/catch и на чтение, и на запись |
@@ -280,9 +285,11 @@ Git: ветка `master`, один коммит `fb23646 Initial commit`. `packa
   6. Hard: лапа летит, тап по иконке отбивает, пропуск даёт slow-mo и −30.
   7. Game over → «ЗАНОВО» и «В МЕНЮ» кликаются.
   8. Mute, рекорд в `localStorage`, поворот/ресайз, отсутствие ошибок в консоли.
+  9. Full-screen: на 9:16, 19.5:9, 20:9 и планшете нет чёрных полос; HUD/кнопка не залезают под вырез и системные жесты; при смене высоты вьюпорта предметы не «телепортируются» к рту.
+  10. Сложность не зависит от экрана: на разных разрешениях время падения от верхней кромки до рта и окно укуса одинаковые (формула из §5).
 - При изменении баланса проверять связку «скорость ↔ интервал спавна ↔ допуск рта»: при высокой скорости и малом зазоре предметы могут стать неубиваемыми.
 
 ---
 
-Документ поддерживать вручную при изменении правил, констант или структуры `index.html`; номера строк актуальны для коммита `fb23646`.
+Документ поддерживать вручную при изменении правил, констант или структуры `index.html`; номера строк актуальны для рабочей копии на базе коммита `bad27c8` (после коммита правок full-screen вёрстки обновить хэш).
 
