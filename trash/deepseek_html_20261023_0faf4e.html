@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>КУСЬ!</title>
+<style>
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{
+    margin:0; height:100%; overflow:hidden; background:#08050f;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    user-select:none; -webkit-user-select:none;
+  }
+  #app{
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 50% 30%, #1a1030 0%, #08050f 70%);
+  }
+  #stage{
+    position:relative; overflow:hidden;
+    width:min(100vw, calc(100dvh * 9 / 16));
+    height:min(100dvh, calc(100vw * 16 / 9));
+    border-radius:22px;
+    box-shadow:0 0 0 1px rgba(255,255,255,.06), 0 30px 80px rgba(0,0,0,.7);
+    touch-action:none;
+  }
+  #game{ display:block; width:100%; height:100%; }
+
+  /* ---------- HUD ---------- */
+  #hud{
+    position:absolute; top:0; left:0; right:0; padding:12px 14px;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    pointer-events:none; color:#fff; font-weight:800;
+  }
+  #score{
+    font-size:clamp(30px,8vmin,58px); line-height:1;
+    color:#fff; text-shadow:0 4px 0 rgba(0,0,0,.35), 0 0 24px rgba(255,215,106,.5);
+    transition:transform .08s ease;
+  }
+  #score.pop{ transform:scale(1.22); }
+  #bestBox{
+    font-size:clamp(13px,3.2vmin,18px); opacity:.75; padding-top:6px;
+    display:flex; gap:6px; align-items:center;
+  }
+  #muteBtn{
+    pointer-events:auto; position:absolute; top:10px; right:12px;
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12);
+    color:#fff; font-size:clamp(14px,3.4vmin,18px);
+    width:clamp(34px,8.5vmin,44px); height:clamp(34px,8.5vmin,44px);
+    border-radius:50%; display:grid; place-items:center; cursor:pointer;
+    margin-top:clamp(30px,7vmin,42px);
+  }
+  #muteBtn:active{ transform:scale(.92); }
+
+  /* ---------- Кнопка КУСЬ ---------- */
+  #biteBtn{
+    position:absolute; left:50%; bottom:3.5%;
+    transform:translateX(-50%);
+    width:80%; height:15.5%;
+    border:0; border-radius:999px;
+    background:linear-gradient(180deg,#ffd166,#f4a300);
+    color:#40200a; font-weight:900; letter-spacing:.06em;
+    font-size:clamp(22px,6vmin,44px);
+    box-shadow:0 9px 0 #a96400, 0 18px 30px rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.55);
+    pointer-events:none;
+    transition:transform .07s ease, box-shadow .07s ease;
+  }
+  #biteBtn.pressed{
+    transform:translateX(-50%) translateY(7px) scale(.985);
+    box-shadow:0 2px 0 #a96400, 0 8px 16px rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.55);
+  }
+
+  /* ---------- Оверлеи ---------- */
+  #overlay{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    padding:22px; background:rgba(8,5,18,.74); backdrop-filter:blur(7px);
+    -webkit-backdrop-filter:blur(7px); transition:opacity .18s ease;
+  }
+  #overlay.hidden{ opacity:0; pointer-events:none; }
+  .panel{ width:100%; max-width:360px; text-align:center; color:#fff; }
+  .panel.hide{ display:none; }
+  .panel h1{
+    margin:0 0 10px; font-size:clamp(46px,14vmin,84px); letter-spacing:.05em;
+    color:#ffd166; text-shadow:0 7px 0 #a96400, 0 16px 30px rgba(0,0,0,.55);
+  }
+  .panel h2{
+    margin:0 0 8px; font-size:clamp(24px,6.5vmin,36px); color:#ff8a7a;
+    text-shadow:0 4px 0 rgba(0,0,0,.4);
+  }
+  .panel p{
+    margin:0 0 18px; font-size:clamp(14px,3.6vmin,17px); line-height:1.5;
+    color:rgba(255,255,255,.8);
+  }
+  .panel .big{ font-size:clamp(15px,4vmin,19px); color:#fff; margin-bottom:6px; }
+  .panel b{ color:#ffd166; font-size:1.15em; }
+  .btn{
+    display:block; width:100%; margin-top:16px; padding:16px 10px;
+    border:0; border-radius:16px; cursor:pointer;
+    font-size:clamp(18px,4.6vmin,24px); font-weight:900; letter-spacing:.06em;
+    color:#40200a; background:linear-gradient(180deg,#ffd166,#f4a300);
+    box-shadow:0 7px 0 #a96400, 0 14px 26px rgba(0,0,0,.45);
+    transition:transform .07s ease, box-shadow .07s ease;
+  }
+  .btn:active{
+    transform:translateY(5px);
+    box-shadow:0 2px 0 #a96400, 0 6px 12px rgba(0,0,0,.45);
+  }
+  .hint{ margin-top:14px; font-size:clamp(11px,2.9vmin,13px); color:rgba(255,255,255,.45); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="game"></canvas>
+
+    <div id="hud">
+      <div id="score">0</div>
+      <div id="bestBox">🏆 <span id="best">0</span></div>
+    </div>
+    <button id="muteBtn">🔊</button>
+    <button id="biteBtn">КУСЬ!</button>
+
+    <div id="overlay">
+      <div class="panel" id="menuScreen">
+        <h1>КУСЬ!</h1>
+        <p>Кусай только еду.<br>Кирпич, кактус и бомба — <b>game over</b>.<br>Кусь в пустоту — тоже.</p>
+        <button class="btn" id="startBtn">СТАРТ</button>
+        <div class="hint">Тапай в любом месте экрана · Space на клавиатуре</div>
+      </div>
+
+      <div class="panel hide" id="overScreen">
+        <h2 id="overTitle">GAME OVER</h2>
+        <p id="overReason">—</p>
+        <div class="big">Счёт: <b id="finalScore">0</b></div>
+        <div class="big">Рекорд: <b id="finalBest">0</b></div>
+        <button class="btn" id="restartBtn">ЗАНОВО</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ======================= DOM =======================
+  const canvas    = document.getElementById('game');
+  const ctx       = canvas.getContext('2d');
+  const stage     = document.getElementById('stage');
+  const scoreEl   = document.getElementById('score');
+  const bestEl    = document.getElementById('best');
+  const biteBtn   = document.getElementById('biteBtn');
+  const muteBtn   = document.getElementById('muteBtn');
+  const overlay   = document.getElementById('overlay');
+  const menuScreen= document.getElementById('menuScreen');
+  const overScreen= document.getElementById('overScreen');
+  const overTitle = document.getElementById('overTitle');
+  const overReason= document.getElementById('overReason');
+  const finalScore= document.getElementById('finalScore');
+  const finalBest = document.getElementById('finalBest');
+
+  // ======================= Константы (в «юнитах», 640 = высота экрана) =======================
+  const TOL          = 62;    // половина окна «зоны рта» по Y
+  const BASE_SPEED   = 330;   // юнитов/сек
+  const SPEED_STEP   = 26;
+  const MAX_SPEED    = 700;
+  const SPAWN_BASE   = 1.15;  // сек
+  const SPAWN_MIN    = 0.40;
+  const SPAWN_STEP   = 0.012;
+  const MIN_GAP      = 200;   // мин. вертикальный зазор между предметами
+  const FOOD_RATIO   = 0.62;
+  const FOOD  = ['🍉','🍌','🌭','🍎','🍕','🥕','🍇'];
+  const TRAPS = ['🧱','🌵','💣','🪨','🔨','⚙️'];
+  const EMOJI_FONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+
+  // ======================= Размеры =======================
+  let W = 0, H = 0, S = 1, dpr = 1;
+  let mouthX = 0, mouthY = 0, spawnY = 0;
+
+  function resize() {
+    const r = stage.getBoundingClientRect();
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = r.width; H = r.height;
+    canvas.width  = Math.max(1, Math.round(W * dpr));
+    canvas.height = Math.max(1, Math.round(H * dpr));
+    S = H / 640;
+    mouthX = W / 2;
+    mouthY = H * 0.60;
+    spawnY = -60 * S;
+  }
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 120));
+
+  // ======================= Состояние =======================
+  const G = {
+    mode: 'menu',            // menu | play | over
+    score: 0,
+    best: Number(localStorage.getItem('kus_best') || 0),
+    bites: 0,
+    items: [],
+    particles: [],
+    floats: [],
+    spawnTimer: 0,
+    speed: BASE_SPEED,
+    mouthOpen: 0,
+    shake: 0,
+    t: 0,
+    last: 0,
+    muted: false
+  };
+
+  const rnd  = (a, b) => a + Math.random() * (b - a);
+  const pick = a => a[(Math.random() * a.length) | 0];
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+
+  // ======================= ЗВУК (WebAudio, без файлов) =======================
+  let actx = null, master = null;
+
+  function audio() {
+    if (!actx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      actx = new AC();
+    }
+    if (actx.state === 'suspended') actx.resume();
+    return actx;
+  }
+  function out() {
+    const a = audio(); if (!a) return null;
+    if (!master) {
+      master = a.createGain();
+      master.gain.value = G.muted ? 0 : 0.9;
+      master.connect(a.destination);
+    }
+    return master;
+  }
+  function noiseBuf(a, dur) {
+    const len = Math.max(1, Math.floor(a.sampleRate * dur));
+    const b = a.createBuffer(1, len, a.sampleRate);
+    const d = b.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    return b;
+  }
+  function noiseSrc(a, dur) {
+    const s = a.createBufferSource();
+    s.buffer = noiseBuf(a, dur);
+    return s;
+  }
+
+  // Хруст / чавканье
+  function sndCrunch() {
+    const a = audio(); if (!a || G.muted) return;
+    const o = out(); if (!o) return;
+    const t = a.currentTime;
+    const s = noiseSrc(a, 0.3);
+    const bp = a.createBiquadFilter();
+    bp.type = 'bandpass'; bp.Q.value = 1.4;
+    bp.frequency.setValueAtTime(2200, t);
+    bp.frequency.exponentialRampToValueAtTime(420, t + 0.18);
+    const g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.55, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0008, t + 0.24);
+    s.connect(bp).connect(g).connect(o);
+    s.start(t); s.stop(t + 0.3);
+  }
+
+  // Металлический лязг (кирпич/бомба)
+  function sndClang() {
+    const a = audio(); if (!a || G.muted) return;
+    const o = out(); if (!o) return;
+    const t = a.currentTime;
+    [233, 349, 466].forEach((f, i) => {
+      const osc = a.createOscillator();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(f * 2, t);
+      osc.frequency.exponentialRampToValueAtTime(f * 0.55, t + 0.42);
+      const g = a.createGain();
+      g.gain.setValueAtTime(0.16 / (i + 1), t);
+      g.gain.exponentialRampToValueAtTime(0.0008, t + 0.5);
+      osc.connect(g).connect(o);
+      osc.start(t); osc.stop(t + 0.55);
+    });
+    const s = noiseSrc(a, 0.2);
+    const hp = a.createBiquadFilter();
+    hp.type = 'highpass'; hp.frequency.value = 1800;
+    const ng = a.createGain();
+    ng.gain.setValueAtTime(0.25, t);
+    ng.gain.exponentialRampToValueAtTime(0.0008, t + 0.15);
+    s.connect(hp).connect(ng).connect(o);
+    s.start(t); s.stop(t + 0.2);
+  }
+
+  // Свист в пустоту
+  function sndWhoosh() {
+    const a = audio(); if (!a || G.muted) return;
+    const o = out(); if (!o) return;
+    const t = a.currentTime;
+    const s = noiseSrc(a, 0.25);
+    const bp = a.createBiquadFilter();
+    bp.type = 'bandpass'; bp.Q.value = 5;
+    bp.frequency.setValueAtTime(400, t);
+    bp.frequency.exponentialRampToValueAtTime(2600, t + 0.2);
+    const g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.22, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0008, t + 0.22);
+    s.connect(bp).connect(g).connect(o);
+    s.start(t); s.stop(t + 0.25);
+  }
+
+  // ---------- Фоновая «глупая» битва ----------
+  let musicTimer = null, musicStep = 0;
+
+  function startMusic() {
+    if (musicTimer) return;
+    musicStep = 0;
+    musicTimer = setInterval(musicTick, 190);
+  }
+  function stopMusic() {
+    if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+  }
+  function musicTick() {
+    if (!actx || G.muted || G.mode !== 'play') return;
+    const a = actx, t = a.currentTime;
+    const o = master; if (!o) return;
+    const st = musicStep++ % 8;
+
+    if (st === 0 || st === 4) {                      // бочка
+      const osc = a.createOscillator(), g = a.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(150, t);
+      osc.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+      g.gain.setValueAtTime(0.45, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.17);
+      osc.connect(g).connect(o);
+      osc.start(t); osc.stop(t + 0.18);
+    }
+    if (st % 2 === 1) {                              // хэт
+      const s = noiseSrc(a, 0.08);
+      const hp = a.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = 7500;
+      const g = a.createGain();
+      g.gain.setValueAtTime(0.055, t);
+      g.gain.exponentialRampToValueAtTime(0.0008, t + 0.055);
+      s.connect(hp).connect(g).connect(o);
+      s.start(t); s.stop(t + 0.08);
+    }
+    const notes = [98, 0, 98, 0, 130.81, 0, 110, 0];  // бас
+    if (notes[st]) {
+      const osc = a.createOscillator(), g = a.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = notes[st];
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.14, t + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0008, t + 0.19);
+      osc.connect(g).connect(o);
+      osc.start(t); osc.stop(t + 0.2);
+    }
+  }
+
+  // ======================= ЛОГИКА ИГРЫ =======================
+  function spawnInterval() {
+    return Math.max(SPAWN_MIN, SPAWN_BASE - G.bites * SPAWN_STEP);
+  }
+
+  function canSpawn() {
+    let top = Infinity;
+    for (const it of G.items) if (it.y < top) top = it.y;
+    return top >= spawnY + MIN_GAP * S;
+  }
+
+  function spawn() {
+    const isFood = Math.random() < FOOD_RATIO;
+    G.items.push({
+      x: mouthX + rnd(-14, 14) * S,
+      y: spawnY,
+      emoji: isFood ? pick(FOOD) : pick(TRAPS),
+      isFood,
+      rot: rnd(-0.35, 0.35),
+      rotV: rnd(-1.6, 1.6),
+      scale: rnd(0.92, 1.08)
+    });
+  }
+
+  function burst(x, y) {
+    const colors = ['#7ee787', '#ff7b72', '#ffd76a', '#a5d6ff', '#ff9ecd'];
+    for (let i = 0; i < 16; i++) {
+      const ang = rnd(0, Math.PI * 2), sp = rnd(90, 360) * S;
+      const life = rnd(0.28, 0.65);
+      G.particles.push({
+        x, y,
+        vx: Math.cos(ang) * sp,
+        vy: Math.sin(ang) * sp - 140 * S,
+        r: rnd(2, 5.5) * S,
+        life, max: life,
+        color: pick(colors)
+      });
+    }
+  }
+
+  function bite() {
+    if (G.mode !== 'play') return;
+
+    G.mouthOpen = 1;
+    pressFx();
+
+    let best = null, bestD = Infinity;
+    for (const it of G.items) {
+      const d = Math.abs(it.y - mouthY);
+      if (d < bestD) { bestD = d; best = it; }
+    }
+
+    // Укус воздуха / промах по таймингу
+    if (!best || bestD > TOL * S) {
+      sndWhoosh();
+      gameOver('air');
+      return;
+    }
+
+    G.items.splice(G.items.indexOf(best), 1);
+
+    if (best.isFood) {
+      G.score++;
+      G.bites++;
+      G.speed = Math.min(MAX_SPEED, BASE_SPEED + Math.floor(G.bites / 5) * SPEED_STEP);
+      scoreEl.textContent = G.score;
+      scoreEl.classList.add('pop');
+      setTimeout(() => scoreEl.classList.remove('pop'), 90);
+      sndCrunch();
+      burst(best.x, mouthY);
+      G.floats.push({ x: mouthX, y: mouthY - 30 * S, text: '+1', life: 0.85, max: 0.85 });
+    } else {
+      sndClang();
+      G.shake = 20;
+      gameOver('trap');
+    }
+  }
+
+  function gameOver(reason) {
+    if (G.mode !== 'play') return;
+    G.mode = 'over';
+
+    if (G.score > G.best) {
+      G.best = G.score;
+      try { localStorage.setItem('kus_best', String(G.best)); } catch (e) {}
+    }
+    bestEl.textContent = G.best;
+
+    const texts = {
+      air:  ['Ты кусьнул воздух', '🌬️ Мимо рта. Капибара в недоумении.'],
+      trap: ['Ты сломал зубы', '🦷💥 Это был не арбуз.'],
+      miss: ['Капибара голодает', '🥲 Еда пролетела мимо.']
+    };
+    const [title, desc] = texts[reason] || texts.air;
+    overTitle.textContent = title.toUpperCase();
+    overReason.textContent = desc;
+    finalScore.textContent = G.score;
+    finalBest.textContent = G.best;
+
+    menuScreen.classList.add('hide');
+    overScreen.classList.remove('hide');
+    overlay.classList.remove('hidden');
+  }
+
+  function startGame() {
+    audio();
+    G.mode = 'play';
+    G.score = 0; G.bites = 0;
+    G.speed = BASE_SPEED;
+    G.items.length = 0;
+    G.particles.length = 0;
+    G.floats.length = 0;
+    G.spawnTimer = 0.55;
+    G.mouthOpen = 0;
+    G.shake = 0;
+    scoreEl.textContent = '0';
+    overlay.classList.add('hidden');
+    startMusic();
+  }
+
+  function pressFx() {
+    biteBtn.classList.add('pressed');
+    clearTimeout(pressFx._t);
+    pressFx._t = setTimeout(() => biteBtn.classList.remove('pressed'), 90);
+  }
+
+  // ======================= UPDATE =======================
+  function update(dt) {
+    G.t += dt;
+
+    if (G.mouthOpen > 0) G.mouthOpen = Math.max(0, G.mouthOpen - dt / 0.13);
+    if (G.shake > 0)     G.shake = Math.max(0, G.shake - dt * 55);
+
+    for (let i = G.particles.length - 1; i >= 0; i--) {
+      const p = G.particles[i];
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 1100 * S * dt;
+      if (p.life <= 0) G.particles.splice(i, 1);
+    }
+    for (let i = G.floats.length - 1; i >= 0; i--) {
+      const f = G.floats[i];
+      f.life -= dt;
+      f.y -= 70 * S * dt;
+      if (f.life <= 0) G.floats.splice(i, 1);
+    }
+
+    if (G.mode !== 'play') return;
+
+    // Спавн
+    G.spawnTimer -= dt;
+    if (G.spawnTimer <= 0) {
+      if (canSpawn()) { spawn(); G.spawnTimer = spawnInterval(); }
+      else G.spawnTimer = 0.08;
+    }
+
+    // Полёт предметов
+    const limit = mouthY + TOL * S;
+    for (let i = G.items.length - 1; i >= 0; i--) {
+      const it = G.items[i];
+      it.y += G.speed * S * dt;
+      it.rot += it.rotV * dt;
+
+      if (it.y > limit) {
+        G.items.splice(i, 1);
+        if (it.isFood) { gameOver('miss'); return; }
+      }
+    }
+  }
+
+  // ======================= RENDER =======================
+  function roundRect(x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y,     x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x,     y + h, r);
+    ctx.arcTo(x,     y + h, x,     y,     r);
+    ctx.arcTo(x,     y,     x + w, y,     r);
+    ctx.closePath();
+  }
+
+  function drawBackground() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0,    '#150d29');
+    g.addColorStop(0.55, '#251543');
+    g.addColorStop(1,    '#3b2053');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // звёзды
+    for (let i = 0; i < 44; i++) {
+      const x = ((i * 97.3) % W + W) % W;
+      const y = ((i * 151.7) % (H * 0.62));
+      const a = 0.16 + 0.22 * (0.5 + 0.5 * Math.sin(G.t * 2 + i));
+      ctx.fillStyle = 'rgba(255,255,255,' + a.toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.arc(x, y, (i % 3 === 0 ? 1.7 : 1.0) * S, 0, 6.2832);
+      ctx.fill();
+    }
+
+    // мягкий «луч» — колонна падения
+    const cg = ctx.createLinearGradient(mouthX - 70 * S, 0, mouthX + 70 * S, 0);
+    cg.addColorStop(0,   'rgba(255,205,150,0)');
+    cg.addColorStop(0.5, 'rgba(255,205,150,0.075)');
+    cg.addColorStop(1,   'rgba(255,205,150,0)');
+    ctx.fillStyle = cg;
+    ctx.fillRect(mouthX - 70 * S, 0, 140 * S, mouthY);
+  }
+
+  function drawItem(it) {
+    const size = 56 * S * it.scale;
+    ctx.save();
+    ctx.translate(it.x, it.y);
+    ctx.rotate(Math.sin(it.rot) * 0.16);
+    ctx.font = size + 'px ' + EMOJI_FONT;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur = 14 * S;
+    ctx.shadowOffsetY = 3 * S;
+    ctx.fillText(it.emoji, 0, 0);
+    ctx.restore();
+  }
+
+  function drawCapybara() {
+    const cx = mouthX, my = mouthY, s = S;
+    const open = clamp(G.mouthOpen, 0, 1);
+
+    // свечение
+    const gr = ctx.createRadialGradient(cx, my + 55 * s, 6 * s, cx, my + 55 * s, 240 * s);
+    gr.addColorStop(0, 'rgba(255,185,120,0.17)');
+    gr.addColorStop(1, 'rgba(255,185,120,0)');
+    ctx.fillStyle = gr;
+    ctx.beginPath();
+    ctx.arc(cx, my + 55 * s, 240 * s, 0, 6.2832);
+    ctx.fill();
+
+    // уши
+    for (const sx of [-1, 1]) {
+      ctx.fillStyle = '#6b4429';
+      ctx.beginPath(); ctx.arc(cx + sx * 84 * s, my - 96 * s, 27 * s, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = '#472b19';
+      ctx.beginPath(); ctx.arc(cx + sx * 84 * s, my - 96 * s, 15 * s, 0, 6.2832); ctx.fill();
+    }
+
+    // голова
+    ctx.fillStyle = '#8b5e3c';
+    roundRect(cx - 102 * s, my - 110 * s, 204 * s, 230 * s, 82 * s);
+    ctx.fill();
+
+    // морда
+    ctx.fillStyle = '#a3744d';
+    ctx.beginPath();
+    ctx.ellipse(cx, my + 14 * s, 80 * s, 66 * s, 0, 0, 6.2832);
+    ctx.fill();
+
+    // глаза
+    for (const sx of [-1, 1]) {
+      ctx.fillStyle = '#241407';
+      ctx.beginPath(); ctx.arc(cx + sx * 46 * s, my - 58 * s, 13 * s, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.beginPath(); ctx.arc(cx + sx * 46 * s + 4 * s, my - 62 * s, 4.5 * s, 0, 6.2832); ctx.fill();
+    }
+
+    // румянец
+    ctx.fillStyle = 'rgba(255,120,120,0.22)';
+    for (const sx of [-1, 1]) {
+      ctx.beginPath();
+      ctx.ellipse(cx + sx * 70 * s, my - 30 * s, 16 * s, 10 * s, 0, 0, 6.2832);
+      ctx.fill();
+    }
+
+    // нос
+    ctx.fillStyle = '#3a2114';
+    roundRect(cx - 19 * s, my - 40 * s, 38 * s, 22 * s, 11 * s);
+    ctx.fill();
+
+    // рот
+    const ry = (10 + 36 * open) * s;
+    const rx = 48 * s;
+    ctx.fillStyle = '#2a1209';
+    ctx.beginPath();
+    ctx.ellipse(cx, my + 2 * s, rx, ry, 0, 0, 6.2832);
+    ctx.fill();
+
+    if (open > 0.08) {
+      ctx.fillStyle = '#e06b78';
+      ctx.beginPath();
+      ctx.ellipse(cx, my + 2 * s + ry * 0.55, rx * 0.6, ry * 0.3, 0, 0, 6.2832);
+      ctx.fill();
+    }
+
+    // зубы
+    ctx.fillStyle = '#fffdf5';
+    roundRect(cx - 24 * s, my + 2 * s - ry + 1 * s, 13 * s, 10 * s, 3 * s); ctx.fill();
+    roundRect(cx + 11 * s, my + 2 * s - ry + 1 * s, 13 * s, 10 * s, 3 * s); ctx.fill();
+  }
+
+  function drawParticles() {
+    for (const p of G.particles) {
+      ctx.globalAlpha = clamp(p.life / p.max, 0, 1);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, 6.2832);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawFloats() {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '900 ' + (34 * S) + 'px system-ui, sans-serif';
+    for (const f of G.floats) {
+      ctx.globalAlpha = clamp(f.life / f.max, 0, 1);
+      ctx.fillStyle = '#ffd76a';
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = 10 * S;
+      ctx.fillText(f.text, f.x, f.y);
+    }
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+  }
+
+  function render() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    if (G.shake > 0.2) {
+      ctx.translate((Math.random() - 0.5) * G.shake * S, (Math.random() - 0.5) * G.shake * S);
+    }
+
+    drawBackground();
+    for (const it of G.items) drawItem(it);
+    drawCapybara();
+    drawParticles();
+    drawFloats();
+  }
+
+  // ======================= LOOP =======================
+  function loop(ts) {
+    if (!G.last) G.last = ts;
+    let dt = (ts - G.last) / 1000;
+    G.last = ts;
+    if (dt > 0.05) dt = 0.05;   // защита от «телепортов» после сворачивания таба
+
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  // ======================= ВВОД =======================
+  stage.addEventListener('pointerdown', (e) => {
+    if (e.target.closest && e.target.closest('#muteBtn')) return;
+    audio();
+    if (G.mode === 'play') {
+      e.preventDefault();
+      bite();
+    }
+  }, { passive: false });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.code === 'ArrowDown') {
+      e.preventDefault();
+      if (G.mode === 'play') bite();
+    }
+  });
+
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('restartBtn').addEventListener('click', startGame);
+
+  muteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    G.muted = !G.muted;
+    muteBtn.textContent = G.muted ? '🔇' : '🔊';
+    if (master) master.gain.value = G.muted ? 0 : 0.9;
+  });
+
+  // ======================= СТАРТ =======================
+  resize();
+  bestEl.textContent = G.best;
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

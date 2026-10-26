@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>КУСЬ! — миры</title>
+<style>
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
+  html,body{ margin:0; height:100%; overflow:hidden; background:#08050f;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    user-select:none; -webkit-user-select:none; overscroll-behavior:none; }
+  #app{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 50% 30%, #1a1030 0%, #08050f 70%);
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  #stage{ position:relative; overflow:hidden;
+    width:min(100vw, calc(100vh * 9 / 16));
+    height:min(100vh, calc(100vw * 16 / 9));
+    border-radius:22px;
+    box-shadow:0 0 0 1px rgba(255,255,255,.06), 0 30px 80px rgba(0,0,0,.7);
+    touch-action:none; }
+  @supports (height: 100dvh) {
+    #stage{ width:min(100vw, calc(100dvh * 9 / 16));
+      height:min(100dvh, calc(100vw * 16 / 9)); }
+  }
+  #game{ display:block; width:100%; height:100%; }
+
+  #hud{ position:absolute; top:0; left:0; right:0; padding:12px 14px;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    pointer-events:none; color:#fff; font-weight:800; }
+  #leftHud{ display:flex; flex-direction:column; gap:6px; }
+  #lvBadge{ align-self:flex-start; padding:3px 10px; border-radius:999px;
+    font-size:clamp(10px,2.6vmin,13px); letter-spacing:.16em; font-weight:900;
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18);
+    color:#fff; transition:background .3s, box-shadow .3s, color .3s; text-transform:uppercase; }
+  #score{ font-size:clamp(30px,8vmin,58px); line-height:1;
+    color:#fff; text-shadow:0 4px 0 rgba(0,0,0,.35), 0 0 24px rgba(255,215,106,.5);
+    transition:transform .08s ease, text-shadow .4s ease; }
+  #score.pop{ transform:scale(1.22); }
+
+  #combo{ opacity:0; transition:opacity .18s ease; pointer-events:none; }
+  #combo.show{ opacity:1; }
+  #combo .lbl{ font-size:clamp(10px,2.4vmin,13px); letter-spacing:.16em;
+    color:rgba(255,255,255,.55); font-weight:800; }
+  #combo .row{ display:flex; align-items:baseline; gap:8px; margin-top:2px; }
+  #comboCount{ display:inline-block; font-size:clamp(26px,6.6vmin,40px); line-height:1;
+    color:#ffd76a; text-shadow:0 3px 0 #a96400, 0 0 22px rgba(255,215,106,.5);
+    transform:scale(1); transform-origin:left center; }
+  #comboMult{ font-size:clamp(15px,3.8vmin,22px); color:#ff8a3d; font-weight:900;
+    text-shadow:0 2px 0 rgba(0,0,0,.4); }
+  #comboMult:empty{ display:none; }
+  #combo .bar{ width:clamp(56px,15vmin,88px); height:5px;
+    background:rgba(255,255,255,.12); border-radius:3px; overflow:hidden; margin-top:6px; }
+  #comboBar{ height:100%; width:100%;
+    background:linear-gradient(90deg,#ffd166,#ff8a3d); border-radius:3px;
+    transform-origin:left center; transform:scaleX(1); transition:transform .08s linear; }
+
+  #bestBox{ font-size:clamp(13px,3.2vmin,18px); opacity:.75; padding-top:6px;
+    display:flex; gap:6px; align-items:center; }
+  #muteBtn{ pointer-events:auto; position:absolute; top:10px; right:12px;
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12);
+    color:#fff; font-size:clamp(14px,3.4vmin,18px);
+    width:clamp(34px,8.5vmin,44px); height:clamp(34px,8.5vmin,44px);
+    border-radius:50%; display:grid; place-items:center; cursor:pointer;
+    margin-top:clamp(30px,7vmin,42px); }
+  #muteBtn:active{ transform:scale(.92); }
+
+  #biteBtn{ position:absolute; left:50%; bottom:3.5%; transform:translateX(-50%);
+    width:80%; height:15.5%; border:0; border-radius:999px;
+    background: var(--bite-bg, linear-gradient(180deg,#ffd166,#f4a300));
+    color:#40200a; font-weight:900; letter-spacing:.06em;
+    font-size:clamp(22px,6vmin,44px);
+    box-shadow:0 9px 0 #a96400, 0 18px 30px rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.55);
+    pointer-events:none; transition:transform .07s ease, box-shadow .07s ease, background .4s, opacity .2s; }
+  #biteBtn.pressed{ transform:translateX(-50%) translateY(7px) scale(.985);
+    box-shadow:0 2px 0 #a96400, 0 8px 16px rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.55); }
+  #biteBtn.eating{ background:linear-gradient(180deg,#666,#333); color:#888;
+    opacity:.7; box-shadow:0 4px 0 #1a1a1a, 0 8px 16px rgba(0,0,0,.4); }
+
+  #overlay{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    padding:22px; background:rgba(8,5,18,.78); backdrop-filter:blur(7px);
+    -webkit-backdrop-filter:blur(7px); transition:opacity .18s ease;
+    overflow-y:auto; touch-action:pan-y; }
+  #overlay.hidden{ opacity:0; pointer-events:none; }
+  .panel{ width:100%; max-width:380px; text-align:center; color:#fff; }
+  .panel.hide{ display:none; }
+  .panel h1{ margin:0 0 10px; font-size:clamp(46px,14vmin,84px); letter-spacing:.05em;
+    color:#ffd166; text-shadow:0 7px 0 #a96400, 0 16px 30px rgba(0,0,0,.55); }
+  .panel h2{ margin:0 0 8px; font-size:clamp(24px,6.5vmin,36px); color:#ff8a7a;
+    text-shadow:0 4px 0 rgba(0,0,0,.4); }
+  .panel p{ margin:0 0 14px; font-size:clamp(13px,3.4vmin,16px); line-height:1.5;
+    color:rgba(255,255,255,.85); }
+  .panel p.small{ font-size:clamp(11px,2.9vmin,13px); color:rgba(255,255,255,.55); line-height:1.6; }
+  .panel .big{ font-size:clamp(15px,4vmin,19px); color:#fff; margin-bottom:6px; }
+  .panel b{ color:#ffd166; font-size:1.1em; }
+  .panel b.warn{ color:#ff6b6b; }
+  .panel b.good{ color:#7ee787; }
+
+  .diffCol{ display:flex; flex-direction:column; gap:10px; margin-top:16px; }
+  .btn{ display:block; width:100%; padding:16px 10px;
+    border:0; border-radius:16px; cursor:pointer;
+    font-size:clamp(15px,4vmin,20px); font-weight:900; letter-spacing:.05em;
+    color:#40200a; background:linear-gradient(180deg,#ffd166,#f4a300);
+    box-shadow:0 7px 0 #a96400, 0 14px 26px rgba(0,0,0,.45);
+    transition:transform .07s ease, box-shadow .07s ease; }
+  .btn:active{ transform:translateY(5px); box-shadow:0 2px 0 #a96400, 0 6px 12px rgba(0,0,0,.45); }
+  .btn.easy{ background:linear-gradient(180deg,#9bffa6,#3ab54a); color:#0a2f12;
+    box-shadow:0 7px 0 #1e7a2c, 0 14px 26px rgba(0,0,0,.45); }
+  .btn.easy:active{ box-shadow:0 2px 0 #1e7a2c, 0 6px 12px rgba(0,0,0,.45); }
+  .btn.medium{ background:linear-gradient(180deg,#ffbe5c,#e08a00); color:#3a1e00;
+    box-shadow:0 7px 0 #a05e00, 0 14px 26px rgba(0,0,0,.45); }
+  .btn.medium:active{ box-shadow:0 2px 0 #a05e00, 0 6px 12px rgba(0,0,0,.45); }
+  .btn.hard{ background:linear-gradient(180deg,#ff7b6b,#c0392b); color:#fff;
+    box-shadow:0 7px 0 #7a1d10, 0 14px 26px rgba(0,0,0,.45); }
+  .btn.hard:active{ box-shadow:0 2px 0 #7a1d10, 0 6px 12px rgba(0,0,0,.45); }
+  .btn.secondary{
+    background: transparent;
+    color: rgba(255,255,255,.85);
+    border: 2px solid rgba(255,255,255,.22);
+    box-shadow: none;
+    margin-top: 10px;
+    font-size: clamp(13px,3.6vmin,17px);
+    padding: 13px 10px;
+    letter-spacing: .06em;
+  }
+  .btn.secondary:active{
+    transform: translateY(3px);
+    background: rgba(255,255,255,.08);
+    box-shadow: none;
+  }
+  .btn .lbl{ display:block; font-size:1em; }
+  .btn .sublbl{ display:block; font-size:.6em; font-weight:700; opacity:.8;
+    letter-spacing:.06em; margin-top:4px; }
+  .hint{ margin-top:14px; font-size:clamp(11px,2.9vmin,13px); color:rgba(255,255,255,.45); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="game"></canvas>
+    <div id="hud">
+      <div id="leftHud">
+        <div id="lvBadge">LV 1 · НОЧЬ</div>
+        <div id="score">0</div>
+        <div id="combo">
+          <div class="lbl">COMBO</div>
+          <div class="row"><span id="comboCount">0</span><span id="comboMult"></span></div>
+          <div class="bar"><div id="comboBar"></div></div>
+        </div>
+      </div>
+      <div id="bestBox">🏆 <span id="best">0</span></div>
+    </div>
+    <button id="muteBtn">🔊</button>
+    <button id="biteBtn">КУСЬ!</button>
+
+    <div id="overlay">
+      <div class="panel" id="menuScreen">
+        <h1>КУСЬ!</h1>
+        <p>Кусай только еду. Кирпич — <b>game over</b>.<br>Кусь в пустоту — тоже.</p>
+        <p class="small"><b>PERFECT</b> в центре рта даёт ×2 очков.<br>Каждые 8 съеденных — новый мир.</p>
+
+        <div class="diffCol">
+          <button class="btn easy" id="startEasyBtn">
+            <span class="lbl">ЛЕГКО</span>
+            <span class="sublbl">предметы спереди · фастфуд сверху −15</span>
+          </button>
+          <button class="btn medium" id="startMediumBtn">
+            <span class="lbl">СРЕДНЕ</span>
+            <span class="sublbl">предметы сзади · маска · ×1.10</span>
+          </button>
+          <button class="btn hard" id="startHardBtn">
+            <span class="lbl">СЛОЖНО 🐾</span>
+            <span class="sublbl">+ лапа с фастфудом −30 · ×1.15</span>
+          </button>
+        </div>
+
+        <p class="small" style="margin-top:14px">
+          <b class="good">Еда</b> — можно кусать.<br>
+          <b class="warn">Кирпич</b> — game over.<br>
+          <b class="warn">Фастфуд (красный)</b> — <b>−15</b> очков, если съесть.<br>
+          На сложном капибара в маске, предметы сзади, фастфуд тянется лапой: тапай <b>по самому фастфуду</b>.
+        </p>
+        <div class="hint">Тапай в любом месте · Space на клавиатуре</div>
+      </div>
+
+      <div class="panel hide" id="overScreen">
+        <h2 id="overTitle">GAME OVER</h2>
+        <p id="overReason">—</p>
+        <div class="big">Счёт: <b id="finalScore">0</b></div>
+        <div class="big">Уровень: <b id="finalLevel">1</b></div>
+        <div class="big">Рекорд: <b id="finalBest">0</b></div>
+        <button class="btn" id="restartBtn">ЗАНОВО</button>
+        <button class="btn secondary" id="menuBtn">← В ГЛАВНОЕ МЕНЮ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/**
+ * @typedef {'easy'|'medium'|'hard'} Difficulty
+ * @typedef {'menu'|'play'|'over'} GameMode
+ * @typedef {'moving'|'deflected'|'eating'} PawState
+ * @typedef {'menu'|'game'} MusicMode
+ */
+
+/* ============================================================================
+ * CONFIG — tunable constants
+ * ==========================================================================*/
+const LEVELS = [
+  {name:'НОЧЬ',   bg:['#150d29','#251543','#3b2053'], accent:'#a5d6ff', decor:'stars'},
+  {name:'ЗАКАТ',  bg:['#2b0d1a','#6b1c2a','#c0392b'], accent:'#ffd76a', decor:'embers'},
+  {name:'НЕОН',   bg:['#0a0a2b','#1b1b5c','#2a1b6b'], accent:'#00d4ff', decor:'grid'},
+  {name:'ТОКСИН', bg:['#0a1a0a','#0f2b0f','#1a4b1a'], accent:'#7dff5a', decor:'bubbles'},
+  {name:'ОГОНЬ',  bg:['#1a0505','#3a0a0a','#6b1500'], accent:'#ff8a3d', decor:'embers'},
+  {name:'КОСМОС', bg:['#000010','#000428','#0a1a4b'], accent:'#8ecbff', decor:'stars'},
+  {name:'CANDY',  bg:['#3b0a2b','#6b1555','#c0399f'], accent:'#ff9ecd', decor:'bubbles'}
+];
+
+const BITES_PER_LEVEL      = 8;
+const BASE_FALL_SPEED      = 330;   
+const SPEED_INCREMENT      = 26;    
+const MAX_SPEED            = 760;
+const BASE_SPAWN_INTERVAL  = 1.15;
+const MIN_SPAWN_INTERVAL   = 0.36;
+const SPAWN_INTERVAL_STEP  = 0.012;
+const MIN_ITEM_GAP         = 200;
+
+const MOUTH_TOLERANCE      = 62;    
+const PERFECT_RATIO        = 0.40;  
+const BITE_COOLDOWN        = 0.09;
+const COMBO_TIMEOUT        = 2.2;
+const COMBO_STEP           = 4;
+const COMBO_MAX_MULT       = 5;
+const FASTFOOD_PENALTY     = 15;
+const EAT_PENALTY          = 30;
+const EAT_SEQUENCE_TIME    = 2.2;
+const EAT_TIME_SCALE       = 0.22;
+
+const HITSTOP_OK           = 0.035;
+const HITSTOP_PERFECT      = 0.06;
+const HITSTOP_LEVELUP      = 0.22;
+
+const LEVELUP_BOOST_MULT   = 1.55;
+const LEVELUP_BOOST_TIME   = 0.55;
+
+const PAW_BASE_TRAVEL      = 4.2;
+const PAW_LEVEL_SPEEDUP    = 0.22;
+const PAW_MIN_TRAVEL       = 2.4;
+const PAW_HIT_RADIUS       = 78;
+const PAW_SPAWN_MIN        = 5;
+const PAW_SPAWN_MAX        = 9;
+const PAW_SPAWN_CHANCE     = 0.7;
+const TAP_FASTFOOD_RADIUS  = 40;
+
+/* Капибара ест ТОЛЬКО фрукты и овощи. Всё остальное - вредный фастфуд. */
+const FOOD_EMOJI           = ['🍉','🍌','🍎','🥕','🍇'];
+const FASTFOOD_EMOJI       = ['🍔','🍟','🌮','🍩','🍗','🥤','🌭','🍕'];
+const TRAP_EMOJI           = ['🧱','🌵','💣','🪨','🔨','⚙️'];
+
+const FRUIT_VEGETABLE_EMOJI = new Set(['🍉','🍌','🍎','🥕','🍇']);
+
+const EMOJI_FONT           = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+const ITEM_BASE_SIZE       = 56;
+
+const GAME_MUSIC_BASE_MS   = 190;
+const GAME_MUSIC_STEP_MS   = 12;
+const GAME_MUSIC_MIN_MS    = 110;
+const GAME_MUSIC_SLOWMO    = 1.6;
+const MENU_MUSIC_TICK_MS   = 400; 
+
+/* ============================================================================
+ * UTILITIES
+ * ==========================================================================*/
+const rnd   = (a, b) => a + Math.random() * (b - a);
+const pick  = (arr) => arr[(Math.random() * arr.length) | 0];
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const dist  = (x1, y1, x2, y2) => Math.hypot(x1 - x2, y1 - y2);
+
+function hexToRgba(hex, alpha) {
+  const h = hex.replace('#', '');
+  const expanded = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const n = parseInt(expanded, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha.toFixed(3)})`;
+}
+
+function vibrate(pattern) {
+  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (_) {}
+}
+
+/* ЖЕСТКАЯ ПРОВЕРКА: если это не фрукт/овощ, значит это вредный фастфуд */
+function isJunkFood(item) {
+  return (item.isFood || item.isFastFood) && !FRUIT_VEGETABLE_EMOJI.has(item.emoji);
+}
+
+function difficultySpeedMultiplier(d) {
+  if (d === 'medium') return 1.10;
+  if (d === 'hard')   return 1.15;
+  return 1;
+}
+
+/* ============================================================================
+ * DOM
+ * ==========================================================================*/
+const canvas   = document.getElementById('game');
+const ctx      = canvas.getContext('2d');
+const stage    = document.getElementById('stage');
+const scoreEl  = document.getElementById('score');
+const bestEl   = document.getElementById('best');
+const lvBadge  = document.getElementById('lvBadge');
+const comboEl  = document.getElementById('combo');
+const comboCountEl = document.getElementById('comboCount');
+const comboMultEl  = document.getElementById('comboMult');
+const comboBarEl   = document.getElementById('comboBar');
+const biteBtn  = document.getElementById('biteBtn');
+const muteBtn  = document.getElementById('muteBtn');
+const overlay  = document.getElementById('overlay');
+const menuScreen = document.getElementById('menuScreen');
+const overScreen = document.getElementById('overScreen');
+const overTitle  = document.getElementById('overTitle');
+const overReason = document.getElementById('overReason');
+const finalScore = document.getElementById('finalScore');
+const finalLevel = document.getElementById('finalLevel');
+const finalBest  = document.getElementById('finalBest');
+
+/* ============================================================================
+ * CANVAS LAYOUT & GLOBAL VARS
+ * ==========================================================================*/
+let W = 0, H = 0, S = 1, dpr = 1, mouthX = 0, mouthY = 0, spawnY = 0;
+let enableTouch = true;
+
+function resize() {
+  const r = stage.getBoundingClientRect();
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = r.width; H = r.height;
+  canvas.width  = Math.max(1, Math.round(W * dpr));
+  canvas.height = Math.max(1, Math.round(H * dpr));
+  S = H / 640;
+  mouthX = W / 2;
+  mouthY = H * 0.60;
+  spawnY = -60 * S;
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 120));
+
+/* ============================================================================
+ * GAME STATE
+ * ==========================================================================*/
+const G = {
+  mode: 'menu', diff: 'easy', score: 0,
+  best: Number(localStorage.getItem('kus_best') || 0),
+  bites: 0, level: 1, items: [], paws: [], particles: [], floats: [], shockwaves: [],
+  spawnTimer: 0, pawTimer: 6, speed: BASE_FALL_SPEED, speedBoost: 1, speedBoostTimer: 0,
+  mouthOpen: 0, shake: 0, t: 0, last: 0, muted: false, combo: 0, comboTimer: 0,
+  lastBite: -1, hitStop: 0, flash: 0, zoomPunch: 1, levelBanner: null,
+  eatSequence: false, eatTimer: 0, timeScale: 1, chewSfxTimer: 0, eatChewFood: '',
+  pawHintShown: false, swipeTrail: []
+};
+
+const currentLevel = () => LEVELS[G.level - 1];
+const currentAccent = () => currentLevel().accent;
+
+/* ============================================================================
+ * AUDIO
+ * ==========================================================================*/
+let audioContext = null;
+let masterGain   = null;
+
+function getAudioContext() {
+  if (!audioContext) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    try { audioContext = new AC(); } catch (_) { return null; }
+  }
+  if (audioContext.state === 'suspended') {
+    audioContext.resume().catch(()=>{});
+  }
+  return audioContext;
+}
+
+function getMasterOut() {
+  const ac = getAudioContext();
+  if (!ac) return null;
+  if (!masterGain) {
+    masterGain = ac.createGain();
+    masterGain.gain.value = G.muted ? 0 : 0.9;
+    masterGain.connect(ac.destination);
+  }
+  return masterGain;
+}
+
+function createNoiseBuffer(ac, duration) {
+  const len = Math.max(1, Math.floor(ac.sampleRate * duration));
+  const buf = ac.createBuffer(1, len, ac.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+  return buf;
+}
+
+function createNoiseSource(ac, duration) {
+  const src = ac.createBufferSource();
+  src.buffer = createNoiseBuffer(ac, duration);
+  return src;
+}
+
+function sfxContext() {
+  if (G.muted) return null;
+  const a = getAudioContext();
+  if (!a) return null;
+  const o = getMasterOut();
+  if (!o) return null;
+  return { a, o };
+}
+
+const Sfx = {
+  crunch() {
+    const c = sfxContext(); if (!c) return;
+    const { a, o } = c; const t = a.currentTime;
+    const src = createNoiseSource(a, 0.3);
+    const bp = a.createBiquadFilter();
+    bp.type = 'bandpass'; bp.Q.value = 1.4;
+    bp.frequency.setValueAtTime(2200, t);
+    bp.frequency.exponentialRampToValueAtTime(420, t + 0.18);
+    const g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.55, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0008, t + 0.24);
+    src.connect(bp).connect(g).connect(o); src.start(t); src.stop(t + 0.3);
+  },
+  perfect() {
+    const c = sfxContext(); if (!c) return;
+    const { a, o } = c; const t = a.currentTime;
+    [880, 1108, 1320, 1760].forEach((freq, i) => {
+      const osc = a.createOscillator(); osc.type = 'triangle'; osc.frequency.value = freq;
+      const g = a.createGain(); const ts = t + i * 0.045;
+      g.gain.setValueAtTime(0.0001, ts); g.gain.exponentialRampToValueAtTime(0.18, ts + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0008, ts + 0.16);
+      osc.connect(g).connect(o); osc.start(ts); osc.stop(ts + 0.17);
+    });
+  },
+  levelUp() {
+    const c = sfxContext(); if (!c) return;
+    const { a, o } = c; const t = a.currentTime;
+    [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+      const osc = a.createOscillator(); osc.type = 'sine'; osc.frequency.value = freq;
+      const g = a.createGain(); const ts = t + i * 0.07;
+      g.gain.setValueAtTime(0.0001, ts); g.gain.exponentialRampToValueAtTime(0.22, ts + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0008, ts + 0.4);
+      osc.connect(g).connect(o); osc.start(ts); osc.stop(ts + 0.45);
+    });
+  },
+  clang() {
+    const c = sfxContext(); if (!c) return;
+    const { a, o } = c; const t = a.currentTime;
+    [233, 349, 466].forEach((freq, i) => {
+      const osc = a.createOscillator(); osc.type = 'square';
+      osc.frequency.setValueAtTime(freq * 2, t); osc.frequency.exponentialRampToValueAtTime(freq * 0.55, t + 0.42);
+      const g = a.createGain(); g.gain.setValueAtTime(0.16 / (i + 1), t); g.gain.exponentialRampToValueAtTime(0.0008, t + 0.5);
+      osc.connect(g).connect(o); osc.start(t); osc.stop(t + 0.55);
+    });
+  },
+  whoosh() {
+    const c = sfxContext(); if (!c) return;
+    const { a, o } = c; const t = a.currentTime;
+    const src = createNoiseSource(a, 0.25);
+    const bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 5;
+    bp.frequency.setValueAtTime(400, t); bp.frequency.exponentialRampToValueAtTime(2600, t + 0.2);
+    const g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0008, t + 0.22);
+    src.connect(bp).connect(g).connect(o); src.start(t); src.stop(t + 0.25);
+  },
+  deflect() {
+    const c = sfxContext(); if (!c) return;
+    const { a, o } = c; const t = a.currentTime;
+    const src = createNoiseSource(a, 0.15);
+    const bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 3;
+    bp.frequency.setValueAtTime(1400, t); bp.frequency.exponentialRampToValueAtTime(3000, t + 0.08);
+    const g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0008, t + 0.12);
+    src.connect(bp).connect(g).connect(o); src.start(t); src.stop(t + 0.15);
+  },
+  chomp() {
+    const c = sfxContext(); if (!c) return;
+    const { a, o } = c; const t = a.currentTime;
+    for (let i = 0; i < 2; i++) {
+      const ts = t + i * 0.09, src = createNoiseSource(a, 0.12);
+      const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 800;
+      const g = a.createGain(); g.gain.setValueAtTime(0.0001, ts); g.gain.exponentialRampToValueAtTime(0.6, ts + 0.008); g.gain.exponentialRampToValueAtTime(0.0008, ts + 0.09);
+      src.connect(lp).connect(g).connect(o); src.start(ts); src.stop(ts + 0.12);
+    }
+  },
+  munch() {
+    const c = sfxContext(); if (!c) return;
+    const { a, o } = c; const t = a.currentTime;
+    const src = createNoiseSource(a, 0.1);
+    const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1200;
+    const g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0008, t + 0.08);
+    src.connect(lp).connect(g).connect(o); src.start(t); src.stop(t + 0.1);
+  },
+  penalty() {
+    const c = sfxContext(); if (!c) return;
+    const { a, o } = c; const t = a.currentTime;
+    [440, 415, 392, 370].forEach((freq, i) => {
+      const osc = a.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = freq;
+      const g = a.createGain(); const ts = t + i * 0.09;
+      g.gain.setValueAtTime(0.0001, ts); g.gain.exponentialRampToValueAtTime(0.12, ts + 0.02); g.gain.exponentialRampToValueAtTime(0.0008, ts + 0.18);
+      osc.connect(g).connect(o); osc.start(ts); osc.stop(ts + 0.2);
+    });
+  }
+};
+
+const Music = {
+  mode: null, timer: null, step: 0,
+  play(mode) {
+    if (this.mode === mode && this.timer) return;
+    this._stopTimer(); this.mode = mode; this.step = 0; this._schedule();
+  },
+  stop() { this._stopTimer(); this.mode = null; },
+  _stopTimer() { if (this.timer) { clearTimeout(this.timer); this.timer = null; } },
+  _schedule() {
+    if (!this.mode) return;
+    const interval = this.mode === 'menu' ? MENU_MUSIC_TICK_MS : this._gameInterval();
+    this.timer = setTimeout(() => { this._tick(); this._schedule(); }, interval);
+  },
+  _gameInterval() {
+    const base = Math.max(GAME_MUSIC_MIN_MS, GAME_MUSIC_BASE_MS - (G.level - 1) * GAME_MUSIC_STEP_MS);
+    return base * (G.eatSequence ? GAME_MUSIC_SLOWMO : 1);
+  },
+  _tick() {
+    if (!audioContext) return;
+    if (audioContext.state === 'suspended') audioContext.resume().catch(()=>{});
+    if (audioContext.state !== 'running') return;
+    if (G.muted) return;
+    const o = getMasterOut(); if (!o) return;
+
+    if (this.mode === 'menu') this._tickMenu(o);
+    else if (this.mode === 'game' && G.mode === 'play') this._tickGame(o);
+  },
+  _tickMenu(o) {
+    const a = audioContext, t = a.currentTime;
+    const st = this.step++ % 8;
+
+    if (st === 0 || st === 4) {
+      const osc = a.createOscillator(), g = a.createGain();
+      osc.type = 'sine'; osc.frequency.setValueAtTime(130, t); osc.frequency.exponentialRampToValueAtTime(50, t + 0.1);
+      g.gain.setValueAtTime(0.28, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+      osc.connect(g).connect(o); osc.start(t); osc.stop(t + 0.15);
+    }
+    if (st === 2 || st === 6) {
+      const src = createNoiseSource(a, 0.06);
+      const hp = a.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 8500;
+      const g = a.createGain(); g.gain.setValueAtTime(0.03, t); g.gain.exponentialRampToValueAtTime(0.0008, t + 0.04);
+      src.connect(hp).connect(g).connect(o); src.start(t); src.stop(t + 0.06);
+    }
+    const MELODY = [440, 0, 493.88, 523.25, 0, 440, 0, 392];
+    const note = MELODY[st];
+    if (note) {
+      const osc = a.createOscillator(), g = a.createGain();
+      osc.type = 'triangle'; osc.frequency.value = note;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.1, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0008, t + 0.3);
+      osc.connect(g).connect(o); osc.start(t); osc.stop(t + 0.32);
+    }
+    if (st === 0) {
+      this._playPad(a, t, 220.00, o); this._playPad(a, t, 261.63, o); this._playPad(a, t, 329.63, o);
+    }
+  },
+  _playPad(a, t, freq, o) {
+    const osc = a.createOscillator(); osc.type = 'sine'; osc.frequency.value = freq;
+    const g = a.createGain(); const dur = 2.2;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.03, t + 0.7); g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+    osc.connect(g).connect(o); osc.start(t); osc.stop(t + dur);
+  },
+  _tickGame(o) {
+    const a = audioContext, t = a.currentTime;
+    const st = this.step++ % 8;
+    if (st === 0 || st === 4) {
+      const osc = a.createOscillator(), g = a.createGain();
+      osc.type = 'sine'; osc.frequency.setValueAtTime(150, t); osc.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+      g.gain.setValueAtTime(0.45, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.17);
+      osc.connect(g).connect(o); osc.start(t); osc.stop(t + 0.18);
+    }
+    if (st % 2 === 1) {
+      const src = createNoiseSource(a, 0.08);
+      const hp = a.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 7500;
+      const g = a.createGain(); g.gain.setValueAtTime(0.055, t); g.gain.exponentialRampToValueAtTime(0.0008, t + 0.055);
+      src.connect(hp).connect(g).connect(o); src.start(t); src.stop(t + 0.08);
+    }
+    const notes = [98, 0, 98, 0, 130.81, 0, 110, 0];
+    if (notes[st]) {
+      const osc = a.createOscillator(), g = a.createGain();
+      osc.type = 'triangle'; osc.frequency.value = notes[st];
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.14, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0008, t + 0.19);
+      osc.connect(g).connect(o); osc.start(t); osc.stop(t + 0.2);
+    }
+  }
+};
+
+/* ============================================================================
+ * SPAWN & UPDATE LOGIC
+ * ==========================================================================*/
+function currentSpawnInterval() {
+  return Math.max(MIN_SPAWN_INTERVAL, BASE_SPAWN_INTERVAL - G.bites * SPAWN_INTERVAL_STEP);
+}
+
+function canSpawn() {
+  let topmost = Infinity;
+  for (const it of G.items) if (it.y < topmost) topmost = it.y;
+  return topmost >= spawnY + MIN_ITEM_GAP * S;
+}
+
+function pickItemType() {
+  const r = Math.random();
+  if (G.diff === 'hard') return r < 0.62 ? 'food' : 'trap';
+  if (G.diff === 'medium') {
+    if (r < 0.55) return 'food';
+    if (r < 0.80) return 'fastfood';
+    return 'trap';
+  }
+  if (r < 0.60) return 'food';
+  if (r < 0.85) return 'fastfood';
+  return 'trap';
+}
+
+function spawnItem() {
+  const type = pickItemType();
+  const isFood = type === 'food';
+  const isFastFood = type === 'fastfood';
+  const emoji = isFood ? pick(FOOD_EMOJI) : isFastFood ? pick(FASTFOOD_EMOJI) : pick(TRAP_EMOJI);
+  const sx = mouthX + rnd(-14, 14) * S;
+  G.items.push({
+    x: sx, baseX: sx, y: spawnY, emoji, isFood, isFastFood,
+    rot: rnd(-0.35, 0.35), rotV: rnd(-1.6, 1.6), scale: rnd(0.92, 1.08),
+    sway: G.level >= 3 ? rnd(0, 38) * S : 0, swayPhase: rnd(0, 6.2832), swaySpeed: rnd(2.2, 3.6)
+  });
+}
+
+function bezierPosition(t, x0, y0, x1, y1, x2, y2) {
+  const u = 1 - t;
+  return { x: u * u * x0 + 2 * u * t * x1 + t * t * x2, y: u * u * y0 + 2 * u * t * y1 + t * t * y2 };
+}
+
+function spawnPaw() {
+  const side = Math.random() < 0.5 ? 'left' : 'right', sg = side === 'left' ? -1 : 1;
+  const startX = mouthX + sg * 50 * S, startY = mouthY + 130 * S;
+  const targetX = mouthX + sg * 22 * S, targetY = mouthY + 18 * S;
+  const ctrlX = mouthX + sg * 85 * S, ctrlY = mouthY + 70 * S;
+  const travelTime = Math.max(PAW_MIN_TRAVEL, PAW_BASE_TRAVEL - (G.level - 1) * PAW_LEVEL_SPEEDUP);
+
+  G.paws.push({
+    state: 'moving', x: startX, y: startY, startX, startY, targetX, targetY, ctrlX, ctrlY,
+    travelTime, progress: 0, food: pick(FASTFOOD_EMOJI), side, sg, wobble: 0, rotation: 0
+  });
+
+  if (!G.pawHintShown) {
+    G.pawHintShown = true;
+    G.floats.push({ x: startX, y: startY - 60 * S, text: 'ТАПНИ ПО ЕДЕ!', life: 2.2, max: 2.2, color: '#ff8a3d', size: 1.2 });
+  }
+  vibrate(20);
+}
+
+function deflectPaw(index) {
+  const paw = G.paws[index];
+  if (!paw || paw.state !== 'moving') return;
+  paw.state = 'deflected'; paw.deflectVX = paw.sg * 900 * S; paw.deflectVY = -500 * S; paw.deflectTimer = 0.7;
+  burst(paw.x, paw.y, ['#ffd76a', '#ff8a3d', '#fff']); Sfx.deflect(); vibrate([10, 30, 10]);
+  G.shake = Math.max(G.shake, 8);
+  G.floats.push({ x: paw.x, y: paw.y - 30 * S, text: '👍', life: 0.7, max: 0.7, color: '#fff', size: 1.2 });
+}
+
+function eatPaw(index) {
+  const paw = G.paws[index];
+  if (!paw || paw.state !== 'moving') return;
+  paw.state = 'eating'; paw.eatBaseX = mouthX + (paw.side === 'left' ? -50 : 50) * S; paw.eatBaseY = mouthY + 25 * S;
+  paw.x = paw.eatBaseX; paw.y = paw.eatBaseY; paw.eatPhase = 0; paw.isSecond = false; paw.startX = paw.x; paw.startY = mouthY + 130 * S;
+
+  const otherSide = paw.side === 'left' ? 'right' : 'left';
+  G.paws.push({
+    state: 'eating', x: mouthX + (otherSide === 'left' ? -50 : 50) * S, y: mouthY + 25 * S,
+    startX: mouthX + (otherSide === 'left' ? -50 : 50) * S, startY: mouthY + 130 * S,
+    eatBaseX: mouthX + (otherSide === 'left' ? -50 : 50) * S, eatBaseY: mouthY + 25 * S,
+    eatPhase: Math.PI, isSecond: true, food: paw.food, side: otherSide, sg: otherSide === 'left' ? -1 : 1, wobble: 0, rotation: 0
+  });
+
+  G.eatSequence = true; G.eatTimer = EAT_SEQUENCE_TIME; G.timeScale = EAT_TIME_SCALE;
+  G.chewSfxTimer = 0; G.eatChewFood = paw.food; G.mouthOpen = 1; G.hitStop = 0;
+  G.flash = 0.55; G.zoomPunch = 1.12; G.shake = 18;
+  G.shockwaves.push({ r: 0, max: Math.max(W, H) * 1.2, life: 1.4, maxLife: 1.4, color: '#ff8a3d' });
+  G.shockwaves.push({ r: 0, max: Math.max(W, H) * 0.6, life: 0.9, maxLife: 0.9, color: '#ffd76a' });
+  Sfx.chomp(); vibrate([50, 30, 100, 30, 100]);
+  G.floats.push({ x: mouthX, y: mouthY - 140 * S, text: 'НЯМ-НЯМ!', life: 2.2, max: 2.2, color: '#ff8a3d', size: 1.5 });
+  biteBtn.classList.add('eating');
+}
+
+function endEatSequence() {
+  if (!G.eatSequence) return;
+  G.eatSequence = false; G.timeScale = 1; G.eatTimer = 0;
+  const before = G.score; G.score = Math.max(0, G.score - EAT_PENALTY); const lost = before - G.score;
+  scoreEl.textContent = G.score;
+  G.floats.push({ x: mouthX, y: mouthY - 90 * S, text: lost > 0 ? '-' + lost : '💀', life: 1.6, max: 1.6, color: '#ff5050', size: 1.8 });
+  G.shake = 14; G.flash = 0.28; G.zoomPunch = 1.05; Sfx.penalty(); vibrate([60, 40, 120]); resetCombo();
+
+  for (let i = G.paws.length - 1; i >= 0; i--) {
+    const p = G.paws[i];
+    if (p.state === 'eating') { p.state = 'deflected'; p.deflectVX = p.sg * 900 * S; p.deflectVY = -500 * S; p.deflectTimer = 0.7; p.rotation = 0; }
+  }
+  biteBtn.classList.remove('eating');
+}
+
+function burst(x, y, palette) {
+  const colors = palette || ['#7ee787', '#ff7b72', '#ffd76a', '#a5d6ff', '#ff9ecd'];
+  for (let i = 0; i < 16; i++) {
+    const ang = rnd(0, Math.PI * 2), sp = rnd(90, 360) * S, life = rnd(0.28, 0.65);
+    G.particles.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 140 * S, r: rnd(2, 5.5) * S, life, max: life, color: pick(colors) });
+  }
+}
+function burstGold(x, y) {
+  const colors = ['#ffd76a', '#ffe9a8', '#ff9d3d', '#fff5c2', '#fff'];
+  for (let i = 0; i < 26; i++) {
+    const ang = rnd(0, Math.PI * 2), sp = rnd(140, 460) * S, life = rnd(0.35, 0.85);
+    G.particles.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 200 * S, r: rnd(2.5, 6.5) * S, life, max: life, color: pick(colors) });
+  }
+}
+function burstAccent(x, y, count) {
+  const ac = currentAccent(), colors = [ac, '#fff', hexToRgba(ac, 0.6)];
+  for (let i = 0; i < count; i++) {
+    const ang = rnd(0, Math.PI * 2), sp = rnd(120, 480) * S, life = rnd(0.4, 1);
+    G.particles.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 160 * S, r: rnd(2, 6) * S, life, max: life, color: pick(colors) });
+  }
+}
+
+function comboMultiplier() { return Math.min(1 + Math.floor(G.combo / COMBO_STEP), COMBO_MAX_MULT); }
+function updateComboUI() {
+  if (G.combo < 2) { comboEl.classList.remove('show'); return; }
+  comboEl.classList.add('show'); comboCountEl.textContent = G.combo;
+  const mult = comboMultiplier(); comboMultEl.textContent = mult > 1 ? 'x' + mult : '';
+  const pct = G.comboTimer > 0 ? clamp(G.comboTimer / COMBO_TIMEOUT, 0, 1) : 0;
+  comboBarEl.style.transform = 'scaleX(' + pct.toFixed(3) + ')';
+}
+function comboPop() {
+  comboCountEl.style.transition = 'none'; comboCountEl.style.transform = 'scale(1.28)';
+  void comboCountEl.offsetWidth;
+  comboCountEl.style.transition = 'transform .2s cubic-bezier(.34,1.56,.64,1)'; comboCountEl.style.transform = 'scale(1)';
+}
+function resetCombo() { G.combo = 0; G.comboTimer = 0; updateComboUI(); }
+
+function updateLevelBadge() {
+  const L = currentLevel();
+  lvBadge.textContent = 'LV ' + G.level + ' · ' + L.name;
+  const palette = G.diff === 'hard' ? { bg: 'rgba(255,100,100,0.16)', border: 'rgba(255,100,100,0.6)', fg: '#ff8a8a' }
+    : G.diff === 'medium' ? { bg: 'rgba(255,180,90,0.16)', border: 'rgba(255,180,90,0.6)', fg: '#ffbe5c' }
+    : { bg: 'rgba(126,231,135,0.14)', border: 'rgba(126,231,135,0.55)', fg: '#9bffa6' };
+  lvBadge.style.background = palette.bg; lvBadge.style.borderColor = palette.border;
+  lvBadge.style.color = palette.fg; lvBadge.style.boxShadow = '0 0 14px ' + palette.border;
+  scoreEl.style.textShadow = '0 4px 0 rgba(0,0,0,.35), 0 0 24px ' + hexToRgba(L.accent, 0.65);
+  biteBtn.style.setProperty('--bite-bg', `linear-gradient(180deg,${L.accent},#b45a00)`);
+  if (G.eatSequence) biteBtn.classList.add('eating');
+}
+
+function checkLevelUp() {
+  const target = Math.min(1 + Math.floor(G.bites / BITES_PER_LEVEL), LEVELS.length);
+  if (target > G.level) { G.level = target; triggerLevelUp(); }
+}
+function triggerLevelUp() {
+  const L = currentLevel(); updateLevelBadge();
+  G.flash = 0.85; G.zoomPunch = 1.15; G.shake = Math.max(G.shake, 12); G.hitStop = Math.max(G.hitStop, HITSTOP_LEVELUP);
+  G.speedBoost = LEVELUP_BOOST_MULT; G.speedBoostTimer = LEVELUP_BOOST_TIME;
+  G.shockwaves.push({ r: 0, max: Math.max(W, H) * 1.2, life: 0.9, maxLife: 0.9, color: L.accent });
+  G.levelBanner = { text: 'УРОВЕНЬ ' + G.level, sub: L.name, life: 1.6, max: 1.6 };
+  burstAccent(mouthX, mouthY, 30); Sfx.levelUp(); vibrate([30, 50, 30, 50, 30]);
+}
+
+function pressBiteFx() {
+  biteBtn.classList.add('pressed');
+  clearTimeout(pressBiteFx._timer);
+  pressBiteFx._timer = setTimeout(() => biteBtn.classList.remove('pressed'), 90);
+}
+
+function bite() {
+  if (G.mode !== 'play' || G.eatSequence) return;
+  if (G.t - G.lastBite < BITE_COOLDOWN) return;
+  G.lastBite = G.t; G.mouthOpen = 1; pressBiteFx();
+
+  let closest = null, closestDist = Infinity;
+  for (const it of G.items) {
+    const d = Math.abs(it.y - mouthY);
+    if (d < closestDist) { closestDist = d; closest = it; }
+  }
+  if (!closest || closestDist > MOUTH_TOLERANCE * S) {
+    Sfx.whoosh(); vibrate(20); resetCombo(); gameOver('air'); return;
+  }
+  G.items.splice(G.items.indexOf(closest), 1);
+
+  if (closest.isFood) {
+    const perfect = closestDist < MOUTH_TOLERANCE * S * PERFECT_RATIO;
+    G.combo++; G.comboTimer = COMBO_TIMEOUT;
+    const mult = comboMultiplier(); const gain = (perfect ? 2 : 1) * mult;
+    G.score += gain; G.bites++;
+    const diffMult = difficultySpeedMultiplier(G.diff);
+    G.speed = Math.min(MAX_SPEED * diffMult, (BASE_FALL_SPEED + Math.floor(G.bites / 5) * SPEED_INCREMENT) * diffMult);
+    scoreEl.textContent = G.score; scoreEl.classList.add('pop'); setTimeout(() => scoreEl.classList.remove('pop'), 90);
+
+    if (perfect) {
+      Sfx.perfect(); burstGold(closest.x, mouthY);
+      G.floats.push({ x: mouthX, y: mouthY - 30 * S, text: 'PERFECT +' + gain, life: 1.05, max: 1.05, color: '#ffd76a', size: 1.1 });
+      G.hitStop = Math.max(G.hitStop, HITSTOP_PERFECT); G.zoomPunch = Math.max(G.zoomPunch, 1.035); G.flash = Math.max(G.flash, 0.16); vibrate([12, 40, 12]);
+    } else {
+      Sfx.crunch(); burst(closest.x, mouthY);
+      G.floats.push({ x: mouthX, y: mouthY - 30 * S, text: '+' + gain, life: 0.85, max: 0.85 });
+      G.hitStop = Math.max(G.hitStop, HITSTOP_OK); vibrate(10);
+    }
+    updateComboUI(); comboPop(); checkLevelUp();
+  } else if (closest.isFastFood) {
+    const before = G.score; G.score = Math.max(0, G.score - FASTFOOD_PENALTY); const lost = before - G.score;
+    scoreEl.textContent = G.score;
+    G.floats.push({ x: mouthX, y: mouthY - 30 * S, text: lost > 0 ? '-' + lost : '💀', life: 1.2, max: 1.2, color: '#ff5050', size: 1.6 });
+    Sfx.penalty(); resetCombo(); G.shake = Math.max(G.shake, 10); G.flash = Math.max(G.flash, 0.12); vibrate([30, 20, 60]);
+    burst(closest.x, mouthY, ['#ff5050', '#ff8a3d', '#fff']);
+  } else {
+    Sfx.clang(); G.shake = 20; vibrate([40, 30, 80]); resetCombo(); gameOver('trap');
+  }
+}
+
+function gameOver(reason) {
+  if (G.mode !== 'play') return;
+  G.mode = 'over'; Music.stop(); G.timeScale = 1; G.eatSequence = false; biteBtn.classList.remove('eating');
+
+  if (G.score > G.best) { G.best = G.score; try { localStorage.setItem('kus_best', String(G.best)); } catch (_) {} }
+  bestEl.textContent = G.best;
+
+  const texts = { air: ['Ты кусьнул воздух', '🌬️ Мимо рта. Капибара в недоумении.'], trap: ['Ты сломал зубы', '🦷💥 Это был не арбуз.'], miss: ['Капибара голодает', '🥲 Еда пролетела мимо.'] };
+  const [title, desc] = texts[reason] || texts.air;
+  overTitle.textContent = title.toUpperCase(); overReason.textContent = desc; finalScore.textContent = G.score;
+
+  const diffLabel = G.diff === 'easy' ? ' · ЛЕГКО' : G.diff === 'medium' ? ' · СРЕДНЕ' : ' · СЛОЖНО';
+  finalLevel.textContent = G.level + ' · ' + currentLevel().name + diffLabel; finalBest.textContent = G.best;
+
+  menuScreen.classList.add('hide'); overScreen.classList.remove('hide'); overlay.classList.remove('hidden');
+  
+  // Защита от фантомных кликов
+  enableTouch = false;
+  pointer.active = false; pointer.id = null;
+}
+
+function returnToMenu() {
+  G.mode = 'menu'; G.timeScale = 1; G.eatSequence = false; biteBtn.classList.remove('eating');
+  G.items.length = 0; G.paws.length = 0; G.particles.length = 0; G.floats.length = 0;
+  G.shockwaves.length = 0; G.swipeTrail.length = 0; G.levelBanner = null; G.flash = 0; G.zoomPunch = 1; G.shake = 0;
+  G.combo = 0; G.comboTimer = 0; updateComboUI();
+  overScreen.classList.add('hide'); menuScreen.classList.remove('hide'); overlay.classList.remove('hidden');
+  
+  // Защита от фантомных кликов
+  pointer.active = false; pointer.id = null;
+
+  Music.play('menu');
+}
+
+function startGame(diff) {
+  getAudioContext(); G.diff = diff || 'easy'; G.mode = 'play'; G.score = 0; G.bites = 0; G.level = 1;
+  const mult = difficultySpeedMultiplier(G.diff);
+  G.speed = BASE_FALL_SPEED * mult; G.speedBoost = 1; G.speedBoostTimer = 0;
+  G.items.length = 0; G.paws.length = 0; G.particles.length = 0; G.floats.length = 0; G.shockwaves.length = 0; G.swipeTrail.length = 0;
+  G.spawnTimer = 0.55; G.pawTimer = G.diff === 'hard' ? rnd(3, 5) : Infinity;
+  G.mouthOpen = 0; G.shake = 0; G.combo = 0; G.comboTimer = 0; // G.lastBite = -1; удалено
+  G.hitStop = 0; G.flash = 0; G.zoomPunch = 1; G.levelBanner = null; G.eatSequence = false;
+  G.eatTimer = 0; G.timeScale = 1; G.chewSfxTimer = 0; G.eatChewFood = ''; G.pawHintShown = false;
+
+  scoreEl.textContent = '0'; updateComboUI(); updateLevelBadge(); biteBtn.classList.remove('eating'); overlay.classList.add('hidden');
+
+  // Защита от фантомных кликов и мгновенного куся после старта
+  G.lastBite = 0.3;
+  pointer.active = false; pointer.id = null;
+
+  Music.play('game');
+}
+
+function updateVisuals(dt) {
+  if (G.mouthOpen > 0) G.mouthOpen = Math.max(0, G.mouthOpen - dt / 0.13);
+  if (G.shake > 0) G.shake = Math.max(0, G.shake - dt * 55);
+  if (G.flash > 0) G.flash = Math.max(0, G.flash - dt * 1.6);
+  if (G.zoomPunch > 1.001) { G.zoomPunch = 1 + (G.zoomPunch - 1) * Math.exp(-dt * 9); if (G.zoomPunch < 1.002) G.zoomPunch = 1; }
+
+  for (let i = G.particles.length - 1; i >= 0; i--) {
+    const p = G.particles[i]; p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 1100 * S * dt;
+    if (p.life <= 0) G.particles.splice(i, 1);
+  }
+  for (let i = G.floats.length - 1; i >= 0; i--) {
+    const f = G.floats[i]; f.life -= dt; f.y -= 70 * S * dt;
+    if (f.life <= 0) G.floats.splice(i, 1);
+  }
+  for (let i = G.shockwaves.length - 1; i >= 0; i--) {
+    const s = G.shockwaves[i]; s.life -= dt; s.r = s.max * (1 - s.life / s.maxLife);
+    if (s.life <= 0) G.shockwaves.splice(i, 1);
+  }
+  if (G.levelBanner) { G.levelBanner.life -= dt; if (G.levelBanner.life <= 0) G.levelBanner = null; }
+  if (G.speedBoostTimer > 0) { G.speedBoostTimer -= dt; if (G.speedBoostTimer <= 0) G.speedBoost = 1; }
+  for (let i = G.swipeTrail.length - 1; i >= 0; i--) { G.swipeTrail[i].life -= dt; if (G.swipeTrail[i].life <= 0) G.swipeTrail.splice(i, 1); }
+}
+
+function updatePaws(dt) {
+  for (let i = G.paws.length - 1; i >= 0; i--) {
+    const paw = G.paws[i];
+    if (paw.state === 'deflected') {
+      paw.x += paw.deflectVX * dt; paw.y += paw.deflectVY * dt; paw.deflectVY += 900 * S * dt;
+      paw.deflectTimer -= dt; paw.rotation += 12 * dt;
+      if (paw.deflectTimer <= 0) G.paws.splice(i, 1);
+      continue;
+    }
+    if (paw.state === 'moving') {
+      paw.progress += dt / paw.travelTime;
+      if (paw.progress >= 1) { eatPaw(i); continue; }
+      const p = bezierPosition(paw.progress, paw.startX, paw.startY, paw.ctrlX, paw.ctrlY, paw.targetX, paw.targetY);
+      paw.x = p.x; paw.y = p.y; paw.wobble += dt * 5;
+      continue;
+    }
+    if (paw.state === 'eating') {
+      paw.eatPhase += dt * 14; const co = Math.sin(paw.eatPhase) * 5 * S;
+      paw.x = paw.eatBaseX + co * 0.25; paw.y = paw.eatBaseY + co; paw.wobble += dt * 5;
+    }
+  }
+}
+
+function update(rawDt) {
+  if (G.eatSequence) {
+    G.eatTimer -= rawDt; G.chewSfxTimer -= rawDt;
+    if (G.chewSfxTimer <= 0) {
+      G.chewSfxTimer = 0.20; Sfx.munch();
+      for (let k = 0; k < 3; k++) {
+        const ang = rnd(-Math.PI * 0.85, -Math.PI * 0.15), sp = rnd(50, 160) * S;
+        G.particles.push({ x: mouthX + rnd(-25, 25) * S, y: mouthY - 5 * S, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 40 * S, r: rnd(2, 5.5) * S, life: 0.7, max: 0.7, color: pick(['#ffd76a', '#ff8a3d', '#fff', '#ffb37a']) });
+      }
+      if (Math.random() < 0.55) G.shockwaves.push({ r: 20 * S, max: rnd(90, 160) * S, life: 0.6, maxLife: 0.6, color: '#ff8a3d' });
+    }
+    if (G.eatTimer <= 0) endEatSequence();
+  }
+
+  const dt = rawDt * G.timeScale; G.t += dt; updateVisuals(dt);
+  if (G.mode !== 'play') return;
+  if (G.hitStop > 0) { G.hitStop -= rawDt; return; }
+
+  if (G.comboTimer > 0) { G.comboTimer -= dt; if (G.comboTimer <= 0 && G.combo > 0) G.combo = 0; updateComboUI(); }
+
+  if (G.diff === 'hard' && !G.eatSequence) {
+    G.pawTimer -= dt;
+    if (G.pawTimer <= 0) {
+      G.pawTimer = rnd(PAW_SPAWN_MIN, PAW_SPAWN_MAX) - (G.level - 1) * 0.3;
+      const hasMovingPaw = G.paws.some(p => p.state === 'moving');
+      if (!hasMovingPaw && Math.random() < PAW_SPAWN_CHANCE) spawnPaw();
+    }
+  }
+  updatePaws(dt);
+
+  G.spawnTimer -= dt;
+  if (G.spawnTimer <= 0) { if (canSpawn()) { spawnItem(); G.spawnTimer = currentSpawnInterval(); } else G.spawnTimer = 0.08; }
+
+  const limit = mouthY + MOUTH_TOLERANCE * S, speed = G.speed * G.speedBoost;
+  for (let i = G.items.length - 1; i >= 0; i--) {
+    const it = G.items[i]; it.y += speed * S * dt; it.rot += it.rotV * dt;
+    if (it.sway > 0) it.x = it.baseX + Math.sin(G.t * it.swaySpeed + it.swayPhase) * it.sway;
+    if (it.y > limit) {
+      G.items.splice(i, 1);
+      if (it.isFood) {
+        if (G.eatSequence) G.floats.push({ x: mouthX + rnd(-30, 30) * S, y: mouthY + 20 * S, text: '🥲', life: 0.7, max: 0.7, color: '#fff', size: 1 });
+        else { resetCombo(); gameOver('miss'); return; }
+      }
+    }
+  }
+}
+
+/* ============================================================================
+ * RENDER
+ * ==========================================================================*/
+function roundRectPath(x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2); ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+function drawBackground() {
+  const L = currentLevel();
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, L.bg[0]); g.addColorStop(0.55, L.bg[1]); g.addColorStop(1, L.bg[2]);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  if (L.decor === 'stars') drawStars(); else if (L.decor === 'embers') drawEmbers();
+  else if (L.decor === 'bubbles') drawBubbles(); else if (L.decor === 'grid') drawGrid();
+  const cg = ctx.createLinearGradient(mouthX - 70 * S, 0, mouthX + 70 * S, 0);
+  cg.addColorStop(0, hexToRgba(L.accent, 0)); cg.addColorStop(0.5, hexToRgba(L.accent, 0.08)); cg.addColorStop(1, hexToRgba(L.accent, 0));
+  ctx.fillStyle = cg; ctx.fillRect(mouthX - 70 * S, 0, 140 * S, mouthY);
+}
+
+function drawStars() {
+  for (let i = 0; i < 46; i++) {
+    const x = ((i * 97.3) % W + W) % W, y = ((i * 151.7) % (H * 0.62));
+    const a = 0.16 + 0.28 * (0.5 + 0.5 * Math.sin(G.t * 2 + i));
+    ctx.fillStyle = 'rgba(255,255,255,' + a.toFixed(3) + ')';
+    ctx.beginPath(); ctx.arc(x, y, (i % 3 === 0 ? 1.7 : 1) * S, 0, 6.2832); ctx.fill();
+  }
+}
+function drawEmbers() {
+  for (let i = 0; i < 30; i++) {
+    const x = ((i * 73.3) % W + W) % W, y = H - ((i * 121.7 + G.t * 110 * S) % (H + 40));
+    const a = 0.16 + 0.3 * (0.5 + 0.5 * Math.sin(G.t * 3 + i * 1.7));
+    ctx.fillStyle = 'rgba(255,180,80,' + clamp(a, 0, 1).toFixed(3) + ')';
+    ctx.beginPath(); ctx.arc(x, y, (1.6 + Math.abs(Math.sin(i * 1.3)) * 1.4) * S, 0, 6.2832); ctx.fill();
+  }
+}
+function drawBubbles() {
+  for (let i = 0; i < 20; i++) {
+    const x = ((i * 89.3) % W + W) % W, y = H - ((i * 143.7 + G.t * 70 * S) % (H + 60));
+    const r = (10 + (i % 5) * 5) * S, a = 0.14 + 0.1 * Math.sin(G.t + i);
+    ctx.strokeStyle = 'rgba(255,255,255,' + clamp(a, 0, 1).toFixed(3) + ')'; ctx.lineWidth = 1.5 * S;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.stroke();
+  }
+}
+function drawGrid() {
+  ctx.strokeStyle = hexToRgba(currentAccent(), 0.1); ctx.lineWidth = 1;
+  for (let i = 0; i < 12; i++) { const y = (G.t * 60 * S + i * H / 12) % H; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  for (let i = 0; i < 8; i++) { const x = (G.t * 30 * S + i * W / 8) % W; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+}
+
+function drawSpeedLines() {
+  const speed = G.speed * G.speedBoost;
+  const intensity = clamp((speed - BASE_FALL_SPEED) / (MAX_SPEED - BASE_FALL_SPEED), 0, 1) * G.timeScale;
+  if (intensity < 0.05) return;
+  ctx.save(); ctx.lineCap = 'round';
+  for (let i = 0; i < 26; i++) {
+    const x = ((i * 91.7) % W + W) % W, baseY = (i * 137.3) % (H + 200);
+    const y = ((baseY + G.t * (380 + 420 * intensity) * S) % (H + 200)) - 100;
+    const len = (28 + 120 * intensity) * S, a = (0.05 + 0.11 * intensity) * G.timeScale;
+    ctx.strokeStyle = 'rgba(255,255,255,' + a.toFixed(3) + ')';
+    ctx.lineWidth = 1.4 * S * (0.6 + intensity * 0.8);
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + len); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* Отрисовка красного неона для всей вредной еды */
+function drawItem(it) {
+  const size = ITEM_BASE_SIZE * S * it.scale;
+  ctx.save();
+  ctx.translate(it.x, it.y);
+  ctx.rotate(Math.sin(it.rot) * 0.16);
+  ctx.font = size + 'px ' + EMOJI_FONT;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+  const speed = G.speed * G.speedBoost, sf = clamp((speed - BASE_FALL_SPEED) / (MAX_SPEED - BASE_FALL_SPEED), 0, 1);
+  if (sf > 0.12) {
+    for (let i = 3; i >= 1; i--) {
+      ctx.globalAlpha = 0.1 * sf / i;
+      ctx.fillText(it.emoji, 0, -i * (18 + 24 * sf) * S);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  if (isJunkFood(it)) {
+    const pulse = 0.65 + 0.35 * Math.sin(G.t * 8 + it.x * 0.02);
+    const glowRadius = size * 0.8;
+    const glow = ctx.createRadialGradient(0, 0, size * 0.2, 0, 0, glowRadius);
+    glow.addColorStop(0, `rgba(255, 40, 40, ${0.85 * pulse})`);
+    glow.addColorStop(1, 'rgba(255, 0, 0, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, glowRadius, 0, 6.2832);
+    ctx.fill();
+
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 12 * S;
+    ctx.shadowOffsetY = 3 * S;
+    ctx.fillText(it.emoji, 0, 0);
+  } else {
+    ctx.shadowColor = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur = 14 * S;
+    ctx.shadowOffsetY = 3 * S;
+    ctx.fillText(it.emoji, 0, 0);
+  }
+  ctx.restore();
+}
+
+function drawArm(sx, sy, ex, ey, wx, wy) {
+  const X = ex + (wx || 0), Y = ey + (wy || 0);
+  const mx = (sx + X) * 0.5 + (sy - Y) * 0.08, my = (sy + Y) * 0.5 + (sx - X) * 0.08;
+  ctx.strokeStyle = '#4d2f1a'; ctx.lineWidth = 34 * S; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(mx, my, X, Y); ctx.stroke();
+  ctx.strokeStyle = 'rgba(120,80,50,0.7)'; ctx.lineWidth = 14 * S;
+  ctx.beginPath(); ctx.moveTo(sx, sy - 4 * S); ctx.quadraticCurveTo(mx, my - 4 * S, X, Y - 4 * S); ctx.stroke();
+}
+
+function drawPalm(x, y, wx, wy) {
+  const px = x + (wx || 0), py = y + (wy || 0), pr = 32 * S;
+  ctx.fillStyle = '#6b4429'; ctx.strokeStyle = '#3a2114'; ctx.lineWidth = 3 * S;
+  ctx.beginPath(); ctx.ellipse(px, py, pr, pr * 0.88, 0, 0, 6.2832); ctx.fill(); ctx.stroke();
+  const fr = 11 * S;
+  const fingers = [{ fx: -20, fy: -20, a: -0.4 }, { fx: -7, fy: -25, a: -0.15 }, { fx: 7, fy: -25, a: 0.15 }, { fx: 20, fy: -20, a: 0.4 }];
+  ctx.fillStyle = '#7a5033';
+  for (const f of fingers) {
+    ctx.beginPath(); ctx.ellipse(px + f.fx * S, py + f.fy * S, fr, fr * 0.9, f.a, 0, 6.2832); ctx.fill(); ctx.stroke();
+  }
+}
+
+function drawPaw(paw) {
+  const wx = Math.sin(paw.wobble) * 3 * S, wy = Math.cos(paw.wobble * 1.3) * 2 * S;
+  if (paw.state === 'deflected') {
+    ctx.save(); ctx.translate(paw.x, paw.y); ctx.rotate(paw.rotation); drawPalm(0, 0, 0, 0);
+    ctx.font = 44 * S + 'px ' + EMOJI_FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12 * S;
+    ctx.fillText(paw.food, 0, -52 * S); ctx.restore(); return;
+  }
+  if (paw.state === 'moving') {
+    const d = dist(paw.x, paw.y, mouthX, mouthY);
+    if (d < 260 * S) {
+      const inten = 1 - d / (260 * S);
+      const gr = ctx.createRadialGradient(paw.x, paw.y, 10 * S, paw.x, paw.y, 140 * S);
+      gr.addColorStop(0, 'rgba(255,80,80,' + (0.4 * inten).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(255,80,80,0)');
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(paw.x, paw.y, 140 * S, 0, 6.2832); ctx.fill();
+    }
+    drawArm(paw.startX, paw.startY, paw.x, paw.y, wx, wy); drawPalm(paw.x, paw.y, wx, wy);
+    const foodX = paw.x + wx, foodY = paw.y + wy - 52 * S;
+    const pulse = 0.6 + 0.4 * Math.sin(G.t * 10);
+    ctx.strokeStyle = 'rgba(255,80,80,' + (0.55 * pulse).toFixed(3) + ')'; ctx.lineWidth = 3.5 * S;
+    ctx.beginPath(); ctx.arc(foodX, foodY, TAP_FASTFOOD_RADIUS * S, pulse * 6.2832, 6.2832); ctx.stroke();
+
+    ctx.font = 44 * S + 'px ' + EMOJI_FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(255,60,60,' + (0.9 * pulse).toFixed(3) + ')'; ctx.shadowBlur = 28 * S;
+    ctx.fillText(paw.food, foodX, foodY); ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255,70,70,' + (0.9 * pulse).toFixed(3) + ')'; ctx.lineWidth = 2.5 * S;
+    ctx.strokeText(paw.food, foodX, foodY); return;
+  }
+  if (paw.state === 'eating') { drawArm(paw.startX, paw.startY, paw.x, paw.y, wx, wy); drawPalm(paw.x, paw.y, wx, wy); }
+}
+
+function drawEatingFood() {
+  if (!G.eatSequence) return;
+  const first = G.paws.find(p => p.state === 'eating' && !p.isSecond); if (!first) return;
+  const ph = first.eatPhase || 0, jx = Math.sin(ph) * 4 * S, jy = Math.sin(ph) * 7 * S;
+  ctx.save(); ctx.font = 52 * S + 'px ' + EMOJI_FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(0,0,0,0.75)'; ctx.shadowBlur = 24 * S;
+  ctx.fillText(G.eatChewFood, mouthX + jx, mouthY - 22 * S + jy); ctx.shadowBlur = 0; ctx.restore();
+}
+
+function drawCapybara() {
+  const cx = mouthX, my = mouthY, s = S, ac = currentAccent();
+  let open = clamp(G.mouthOpen, 0, 1), hwx = 0, hr = 0, cp = 0;
+  if (G.eatSequence) {
+    const chew = Math.abs(Math.sin(G.t * 9));
+    open = 0.30 + chew * 0.45; cp = 1 + Math.sin(G.t * 9) * 0.12; hwx = Math.sin(G.t * 11) * 3 * s; hr = Math.sin(G.t * 9) * 0.025;
+  }
+  const br = 1 + Math.sin(G.t * 2.4) * 0.014, ab = clamp(G.combo * 0.02, 0, 0.18);
+  const gr = ctx.createRadialGradient(cx, my + 55 * s, 6 * s, cx, my + 55 * s, 240 * s);
+  gr.addColorStop(0, hexToRgba(G.eatSequence ? '#ff8a3d' : ac, 0.16 + ab + (G.eatSequence ? 0.1 : 0)));
+  gr.addColorStop(1, hexToRgba(G.eatSequence ? '#ff8a3d' : ac, 0));
+  ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, my + 55 * s, 240 * s, 0, 6.2832); ctx.fill();
+
+  ctx.save(); ctx.translate(cx + hwx, my + 40 * s); ctx.rotate(hr); ctx.scale(br, br); ctx.translate(-cx, -(my + 40 * s));
+  for (const sx of [-1, 1]) {
+    ctx.fillStyle = '#6b4429'; ctx.beginPath(); ctx.arc(cx + sx * 84 * s, my - 96 * s, 27 * s, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = '#472b19'; ctx.beginPath(); ctx.arc(cx + sx * 84 * s, my - 96 * s, 15 * s, 0, 6.2832); ctx.fill();
+  }
+  ctx.fillStyle = '#8b5e3c'; roundRectPath(cx - 102 * s, my - 110 * s, 204 * s, 230 * s, 82 * s); ctx.fill();
+  ctx.fillStyle = '#a3744d'; ctx.beginPath(); ctx.ellipse(cx, my + 14 * s, 80 * s, 66 * s, 0, 0, 6.2832); ctx.fill();
+
+  if (G.eatSequence || cp > 0) {
+    const puff = cp || 1;
+    for (const sx of [-1, 1]) { ctx.fillStyle = '#b8845a'; ctx.beginPath(); ctx.ellipse(cx + sx * 78 * s, my + 18 * s, 26 * s * puff, 22 * s * puff, 0, 0, 6.2832); ctx.fill(); }
+  }
+  for (const sx of [-1, 1]) {
+    ctx.fillStyle = '#241407'; ctx.beginPath(); ctx.arc(cx + sx * 46 * s, my - 58 * s, 13 * s, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.beginPath(); ctx.arc(cx + sx * 46 * s + 4 * s, my - 62 * s, 4.5 * s, 0, 6.2832); ctx.fill();
+  }
+  ctx.fillStyle = hexToRgba(G.eatSequence ? '#ff8a3d' : ac, 0.28);
+  for (const sx of [-1, 1]) { ctx.beginPath(); ctx.ellipse(cx + sx * 70 * s, my - 30 * s, 16 * s, 10 * s, 0, 0, 6.2832); ctx.fill(); }
+  ctx.fillStyle = '#3a2114'; roundRectPath(cx - 19 * s, my - 40 * s, 38 * s, 22 * s, 11 * s); ctx.fill();
+
+  const ry = (10 + 36 * open) * s, rx = 48 * s;
+  ctx.fillStyle = '#2a1209'; ctx.beginPath(); ctx.ellipse(cx, my + 2 * s, rx, ry, 0, 0, 6.2832); ctx.fill();
+  if (open > 0.08) { ctx.fillStyle = '#e06b78'; ctx.beginPath(); ctx.ellipse(cx, my + 2 * s + ry * 0.55, rx * 0.6, ry * 0.3, 0, 0, 6.2832); ctx.fill(); }
+  if (!G.eatSequence) {
+    ctx.fillStyle = '#fffdf5';
+    roundRectPath(cx - 24 * s, my + 2 * s - ry + 1 * s, 13 * s, 10 * s, 3 * s); ctx.fill();
+    roundRectPath(cx + 11 * s, my + 2 * s - ry + 1 * s, 13 * s, 10 * s, 3 * s); ctx.fill();
+  }
+  if (G.diff === 'medium' || G.diff === 'hard') {
+    ctx.strokeStyle = '#2a1a1a'; ctx.lineWidth = 4 * s;
+    ctx.beginPath(); ctx.moveTo(cx - 82 * s, my - 60 * s); ctx.lineTo(cx - 104 * s, my - 78 * s); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + 82 * s, my - 60 * s); ctx.lineTo(cx + 104 * s, my - 78 * s); ctx.stroke();
+    ctx.fillStyle = '#1a0a12'; ctx.strokeStyle = '#4a2a3a'; ctx.lineWidth = 2.5 * s;
+    roundRectPath(cx - 84 * s, my - 78 * s, 168 * s, 40 * s, 14 * s); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(90,60,80,0.4)'; roundRectPath(cx - 78 * s, my - 74 * s, 156 * s, 10 * s, 5 * s); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    for (const sx of [-1, 1]) { ctx.beginPath(); ctx.ellipse(cx + sx * 46 * s, my - 58 * s, 26 * s, 13 * s, 0, 0, 6.2832); ctx.fill(); }
+    
+    const zPhase = (G.t * 0.6) % 1;
+    ctx.save(); ctx.globalAlpha = 1 - zPhase; ctx.fillStyle = 'rgba(180,180,220,' + (0.8 * (1 - zPhase)).toFixed(3) + ')';
+    ctx.font = '900 ' + (28 + zPhase * 12) * s + 'px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('z', cx + 110 * s, my - 130 * s - zPhase * 40 * s); ctx.restore();
+    
+    const zPhase2 = ((G.t * 0.6) + 0.4) % 1;
+    ctx.save(); ctx.globalAlpha = 1 - zPhase2; ctx.fillStyle = 'rgba(180,180,220,' + (0.7 * (1 - zPhase2)).toFixed(3) + ')';
+    ctx.font = '900 ' + (22 + zPhase2 * 10) * s + 'px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('z', cx + 130 * s, my - 150 * s - zPhase2 * 40 * s); ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawParticles() {
+  for (const p of G.particles) {
+    ctx.globalAlpha = clamp(p.life / p.max, 0, 1); ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.2832); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+function drawFloats() {
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const f of G.floats) {
+    ctx.globalAlpha = clamp(f.life / f.max, 0, 1);
+    const size = (f.size || 1) * 34 * S;
+    ctx.font = '900 ' + size + 'px system-ui, sans-serif'; ctx.fillStyle = f.color || '#ffd76a';
+    ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 12 * S; ctx.fillText(f.text, f.x, f.y);
+  }
+  ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+}
+function drawShockwaves() {
+  for (const s of G.shockwaves) {
+    const a = s.life / s.maxLife;
+    ctx.strokeStyle = hexToRgba(s.color || currentAccent(), a * 0.9); ctx.lineWidth = 4 * S * a + 1;
+    ctx.beginPath(); ctx.arc(mouthX, mouthY, s.r, 0, 6.2832); ctx.stroke();
+  }
+}
+function drawSwipeTrail() {
+  if (G.swipeTrail.length < 2) return;
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 4 * S; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(G.swipeTrail[0].x, G.swipeTrail[0].y);
+  for (let i = 1; i < G.swipeTrail.length; i++) ctx.lineTo(G.swipeTrail[i].x, G.swipeTrail[i].y);
+  ctx.stroke();
+}
+function drawSlowMoOverlay() {
+  if (!G.eatSequence) return;
+  const t = 1 - G.eatTimer / EAT_SEQUENCE_TIME, inten = Math.sin(t * Math.PI);
+  ctx.fillStyle = 'rgba(20,30,80,' + (0.18 * inten).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 2; i++) {
+    const rp = (G.t * 2 + i * 0.5) % 1, r = 60 * S + rp * 140 * S, a = (1 - rp) * 0.35;
+    ctx.strokeStyle = 'rgba(255,200,120,' + a.toFixed(3) + ')'; ctx.lineWidth = 3 * S;
+    ctx.beginPath(); ctx.arc(mouthX, mouthY, r, 0, 6.2832); ctx.stroke();
+  }
+}
+function drawEatWarning() {
+  if (!G.eatSequence) return;
+  const pulse = 0.55 + 0.45 * Math.sin(G.t * 12);
+  ctx.save(); ctx.font = '900 ' + 44 * S + 'px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(255,90,90,' + (0.55 + pulse * 0.4).toFixed(3) + ')'; ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 28 * S;
+  ctx.fillText('−' + EAT_PENALTY, mouthX, mouthY - 190 * S); ctx.restore();
+}
+function drawVignette() {
+  const speed = G.speed * G.speedBoost;
+  const si = clamp((speed - BASE_FALL_SPEED) / (MAX_SPEED - BASE_FALL_SPEED), 0, 1);
+  const cv = clamp(G.combo / 20, 0, 1) * 0.15, ev = G.eatSequence ? 0.3 : 0;
+  const inten = clamp(si * 0.35 + cv + ev, 0, 0.65);
+  if (inten < 0.02) return;
+  const vg = ctx.createRadialGradient(W / 2, H * 0.5, H * 0.28, W / 2, H * 0.5, H * 0.75);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, (G.eatSequence ? 'rgba(40,10,0,' : 'rgba(0,0,0,') + inten.toFixed(3) + ')');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+}
+function drawFlash() {
+  if (G.flash <= 0) return;
+  ctx.fillStyle = 'rgba(255,255,255,' + (G.flash * 0.6).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H);
+}
+function drawBanner() {
+  if (!G.levelBanner) return;
+  const b = G.levelBanner, t = 1 - b.life / b.max, a = b.life < 0.4 ? b.life / 0.4 : 1, inten = clamp(t * 4, 0, 1);
+  const sc = 1 + (1 - inten) * 0.5 + Math.sin(t * Math.PI) * 0.05;
+  ctx.save(); ctx.translate(W / 2, H * 0.30); ctx.scale(sc, sc); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '900 ' + 50 * S + 'px system-ui, sans-serif'; ctx.fillStyle = '#fff'; ctx.shadowColor = currentAccent(); ctx.shadowBlur = 40 * S;
+  ctx.fillText(b.text, 0, 0);
+  ctx.font = '800 ' + 22 * S + 'px system-ui, sans-serif'; ctx.fillStyle = currentAccent(); ctx.shadowBlur = 20 * S;
+  ctx.fillText(b.sub, 0, 50 * S); ctx.restore(); ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+}
+
+function render() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (G.shake > 0.2) ctx.translate((Math.random() - 0.5) * G.shake * S, (Math.random() - 0.5) * G.shake * S);
+  drawBackground(); drawVignette();
+
+  const zoom = G.zoomPunch;
+  if (zoom > 1.001) { ctx.save(); ctx.translate(mouthX, mouthY); ctx.scale(zoom, zoom); ctx.translate(-mouthX, -mouthY); }
+
+  drawSpeedLines();
+  if (G.diff === 'easy') { drawCapybara(); for (const it of G.items) drawItem(it); }
+  else { for (const it of G.items) drawItem(it); drawCapybara(); }
+
+  for (const p of G.paws) drawPaw(p);
+  drawEatingFood(); drawParticles(); drawFloats(); drawShockwaves(); drawSwipeTrail();
+  if (zoom > 1.001) ctx.restore();
+
+  drawSlowMoOverlay(); drawFlash(); drawEatWarning(); drawBanner();
+}
+
+function loop(ts) {
+  if (!G.last) G.last = ts;
+  let raw = (ts - G.last) / 1000; G.last = ts;
+  if (raw > 0.05) raw = 0.05;
+  update(raw); render();
+  requestAnimationFrame(loop);
+}
+
+/* ============================================================================
+ * INPUT
+ * ==========================================================================*/
+const pointer = { active: false, id: null, startX: 0, startY: 0, pawDeflected: false, downOnFastFood: false };
+function stageXY(e) { const r = stage.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+function isInBiteButtonArea(px, py) {
+  const r = biteBtn.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+  const x1 = r.left - sr.left, y1 = r.top - sr.top, x2 = x1 + r.width, y2 = y1 + r.height;
+  return px >= x1 && px <= x2 && py >= y1 && py <= y2;
+}
+function findFastFoodOnPawAt(px, py) {
+  for (let i = G.paws.length - 1; i >= 0; i--) {
+    const p = G.paws[i]; if (p.state !== 'moving') continue;
+    const wx = Math.sin(p.wobble) * 3 * S, wy = Math.cos(p.wobble * 1.3) * 2 * S;
+    const fx = p.x + wx, fy = p.y + wy - 52 * S;
+    if (dist(px, py, fx, fy) < TAP_FASTFOOD_RADIUS * S) return i;
+  }
+  return -1;
+}
+
+stage.addEventListener('pointerdown', (e) => {
+  if (e.target.closest && e.target.closest('#muteBtn')) return;
+  getAudioContext();
+  if (G.mode !== 'play') return;
+  e.preventDefault();
+  const p = stageXY(e);
+
+  if (isInBiteButtonArea(p.x, p.y)) {
+    if (G.eatSequence) { pressBiteFx(); G.floats.push({ x: p.x, y: p.y - 30 * S, text: '😅', life: 0.7, max: 0.7, color: '#fff', size: 1.2 }); return; }
+    bite(); return;
+  }
+  if (G.eatSequence) { G.floats.push({ x: p.x, y: p.y, text: '😅', life: 0.7, max: 0.7, color: '#fff', size: 1.2 }); return; }
+
+  if (G.diff === 'hard') {
+    const idx = findFastFoodOnPawAt(p.x, p.y);
+    if (idx >= 0) { deflectPaw(idx); pointer.pawDeflected = true; pointer.downOnFastFood = true; pointer.active = false; pointer.id = null; return; }
+    else {bite(); return; }
+  }
+  bite();
+  pointer.active = true; pointer.id = e.pointerId; pointer.startX = p.x; pointer.startY = p.y;
+  pointer.pawDeflected = false; pointer.downOnFastFood = false;
+  G.swipeTrail.length = 0; G.swipeTrail.push({ x: p.x, y: p.y, life: 0.25 });
+}, { passive: false });
+
+window.addEventListener('pointermove', (e) => {
+  if (!pointer.active || G.mode !== 'play') return;
+  if (pointer.id !== null && e.pointerId !== pointer.id) return;
+  const p = stageXY(e); G.swipeTrail.push({ x: p.x, y: p.y, life: 0.25 });
+  if (G.swipeTrail.length > 12) G.swipeTrail.shift();
+});
+
+window.addEventListener('pointerup', (e) => {
+  pointer.active = false;
+  pointer.id = null;
+  pointer.pawDeflected = false;
+  pointer.downOnFastFood = false;
+  // if (!pointer.active) return;
+  // if (pointer.id !== null && e.pointerId !== pointer.id) return;
+  // pointer.active = false;
+  // if (G.mode !== 'play' || G.eatSequence) { pointer.id = null; return; }
+  // const p = stageXY(e); const md = Math.hypot(p.x - pointer.startX, p.y - pointer.startY);
+
+  // if (G.diff === 'hard' && !pointer.pawDeflected) {
+  //   const idx = findFastFoodOnPawAt(p.x, p.y);
+  //   if (idx >= 0) { deflectPaw(idx); pointer.pawDeflected = true; pointer.id = null; return; }
+  // }
+  // if (!pointer.pawDeflected && md < 20 * S && !pointer.downOnFastFood) bite();
+  // pointer.id = null;
+});
+
+window.addEventListener('pointercancel', () => { pointer.active = false; pointer.id = null; });
+
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' || e.code === 'ArrowDown') {
+    e.preventDefault();
+    if (G.mode === 'play' && !G.eatSequence) {
+      if (G.diff === 'hard') { const movingPaw = G.paws.find(p => p.state === 'moving'); if (movingPaw) { deflectPaw(G.paws.indexOf(movingPaw)); return; } }
+      bite();
+    }
+  }
+});
+
+/* ============================================================================
+ * UI BUTTONS & BOOT
+ * ==========================================================================*/
+document.getElementById('startEasyBtn').addEventListener('click', () => {
+  startGame('easy');
+});
+document.getElementById('startMediumBtn').addEventListener('click', () => {
+  startGame('medium');
+});
+document.getElementById('startHardBtn').addEventListener('click', () => {
+  startGame('hard');
+});
+document.getElementById('restartBtn').addEventListener('click', () => {
+  if (!enableTouch) { return; }
+  startGame(G.diff);
+});
+document.getElementById('menuBtn').addEventListener('click', () => {
+  if (!enableTouch) { return; }
+  returnToMenu();
+});
+
+overlay.addEventListener('transitionend', (e) => {
+  // Проверяем, что событие сработало именно для свойства opacity и оверлей сейчас скрыт
+  if (!overlay.classList.contains('hidden')) {
+    enableTouch = true;
+  }
+});
+
+muteBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  G.muted = !G.muted;
+  muteBtn.textContent = G.muted ? '🔇' : '🔊';
+  if (masterGain) masterGain.gain.value = G.muted ? 0 : 0.9;
+});
+
+function unlockAudio() {
+  const ac = getAudioContext();
+  if (ac) {
+    if (ac.state === 'suspended') {
+      ac.resume().then(() => {
+        if (G.mode === 'menu') Music.play('menu');
+      });
+    } else if (ac.state === 'running') {
+      if (G.mode === 'menu') Music.play('menu');
+    }
+  }
+}
+
+setTimeout(() => {
+  const ac = getAudioContext();
+  if (ac && ac.state === 'running') {
+    if (G.mode === 'menu') Music.play('menu');
+  }
+}, 100);
+
+window.addEventListener('pointerdown', unlockAudio);
+window.addEventListener('touchstart', unlockAudio, {passive: true});
+window.addEventListener('keydown', unlockAudio);
+window.addEventListener('click', unlockAudio);
+
+resize();
+bestEl.textContent = G.best;
+updateLevelBadge();
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

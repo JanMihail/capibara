@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="75%">
+      <stop offset="0%" stop-color="#2d1a4a"/>
+      <stop offset="60%" stop-color="#1a1030"/>
+      <stop offset="100%" stop-color="#0a0518"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="65%" r="55%">
+      <stop offset="0%" stop-color="#ffd166" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#ffd166" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="innerEar" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#5a3820"/>
+      <stop offset="100%" stop-color="#3a2114"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Фон -->
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <!-- Звёзды -->
+  <g fill="#ffffff">
+    <circle cx="140" cy="160" r="4" opacity="0.9"/>
+    <circle cx="880" cy="200" r="5" opacity="0.85"/>
+    <circle cx="100" cy="420" r="3" opacity="0.7"/>
+    <circle cx="930" cy="450" r="3.5" opacity="0.75"/>
+    <circle cx="210" cy="90" r="2.5" opacity="0.8"/>
+    <circle cx="820" cy="110" r="2.5" opacity="0.7"/>
+    <circle cx="80" cy="700" r="3" opacity="0.65"/>
+    <circle cx="960" cy="730" r="3" opacity="0.7"/>
+    <circle cx="150" cy="880" r="2.5" opacity="0.6"/>
+    <circle cx="880" cy="920" r="3" opacity="0.65"/>
+  </g>
+
+  <!-- Тёплое свечение за головой -->
+  <circle cx="512" cy="620" r="440" fill="url(#glow)"/>
+
+  <!-- ========== КАПИБАРА ========== -->
+
+  <!-- Уши -->
+  <circle cx="288" cy="335" r="88" fill="#6b4429"/>
+  <circle cx="288" cy="335" r="50" fill="url(#innerEar)"/>
+  <circle cx="736" cy="335" r="88" fill="#6b4429"/>
+  <circle cx="736" cy="335" r="50" fill="url(#innerEar)"/>
+
+  <!-- Голова -->
+  <rect x="222" y="300" width="580" height="620" rx="230" ry="230" fill="#8b5e3c"/>
+
+  <!-- Морда -->
+  <ellipse cx="512" cy="660" rx="215" ry="190" fill="#a3744d"/>
+
+  <!-- Румянец -->
+  <ellipse cx="330" cy="635" rx="50" ry="32" fill="#ff8a7a" opacity="0.55"/>
+  <ellipse cx="694" cy="635" rx="50" ry="32" fill="#ff8a7a" opacity="0.55"/>
+
+  <!-- Глаза -->
+  <ellipse cx="395" cy="525" rx="42" ry="44" fill="#241407"/>
+  <ellipse cx="412" cy="508" rx="14" ry="14" fill="#ffffff" opacity="0.95"/>
+  <ellipse cx="629" cy="525" rx="42" ry="44" fill="#241407"/>
+  <ellipse cx="646" cy="508" rx="14" ry="14" fill="#ffffff" opacity="0.95"/>
+
+  <!-- Нос -->
+  <rect x="462" y="560" width="100" height="60" rx="30" ry="30" fill="#3a2114"/>
+
+  <!-- Открытый рот -->
+  <ellipse cx="512" cy="745" rx="145" ry="95" fill="#2a1209"/>
+
+  <!-- Язык -->
+  <ellipse cx="512" cy="810" rx="85" ry="38" fill="#e06b78"/>
+
+  <!-- Арбуз в пасти -->
+  <g transform="translate(512, 670)">
+    <path d="M -95 0 A 95 95 0 0 1 95 0 Z" fill="#3d9a3d"/>
+    <path d="M -84 0 A 84 84 0 0 1 84 0 Z" fill="#e8f5d8"/>
+    <path d="M -76 0 A 76 76 0 0 1 76 0 Z" fill="#ff4d6a"/>
+    <ellipse cx="-38" cy="28" rx="6" ry="9" fill="#1a0a0a"/>
+    <ellipse cx="38" cy="28" rx="6" ry="9" fill="#1a0a0a"/>
+    <ellipse cx="0" cy="45" rx="6" ry="9" fill="#1a0a0a"/>
+    <ellipse cx="-18" cy="60" rx="5" ry="8" fill="#1a0a0a"/>
+    <ellipse cx="18" cy="60" rx="5" ry="8" fill="#1a0a0a"/>
+  </g>
+
+  <!-- Зубы (кусают арбуз) -->
+  <rect x="455" y="655" width="45" height="30" rx="10" ry="10" fill="#fffdf5" stroke="#8b5e3c" stroke-width="2"/>
+  <rect x="525" y="655" width="45" height="30" rx="10" ry="10" fill="#fffdf5" stroke="#8b5e3c" stroke-width="2"/>
+
+  <!-- Капли сока -->
+  <g fill="#ff4d6a">
+    <ellipse cx="340" cy="820" rx="9" ry="13" opacity="0.9"/>
+    <ellipse cx="684" cy="820" rx="9" ry="13" opacity="0.9"/>
+    <circle cx="315" cy="860" r="6" opacity="0.8"/>
+    <circle cx="709" cy="860" r="6" opacity="0.8"/>
+    <circle cx="512" cy="885" r="5" opacity="0.75"/>
+  </g>
+
+  <!-- Искры (удар «КУСЬ!») -->
+  <g fill="#ffd166">
+    <path d="M 200 750 L 218 768 L 236 750 L 218 732 Z"/>
+    <path d="M 788 750 L 806 768 L 824 750 L 806 732 Z"/>
+    <path d="M 165 690 L 175 700 L 185 690 L 175 680 Z" opacity="0.85"/>
+    <path d="M 839 690 L 849 700 L 859 690 L 849 680 Z" opacity="0.85"/>
+  </g>
+</svg>
